@@ -24,41 +24,33 @@ or any version control task. In jj repos: use jj commands exclusively, never git
 - Conflicts are stored in commits — resolve later, not at merge time.
 - Operation log records everything. `jj undo` reverts any operation.
 
-## Bookmark Rules of Thumb
+## Multi-Agent Bookmark Model
 
-### Named bookmark (main, long-lived branches):
-```bash
-jj commit -m "message"
-jj bookmark set main -r @-          # @- has the content!
-jj git push -b main
-```
+Each agent operates on its own named bookmark, branched from `main`. Isolation is structural — one bookmark per concern, not reactive splitting after the fact.
 
-### Auto-bookmark (PR feature branches):
-```bash
-jj commit -m "feat: add thing"
-jj git push -c @-                   # auto-creates push-<changeid>
-```
-
-### Fix a bookmark pointing at the wrong commit:
-```bash
-jj bookmark set <name> -r <change-id>
-jj git push -b <name>
-```
-
-## Common Workflows
-
-### Start new work
+### Start work (one bookmark per agent/feature)
 ```bash
 jj new main -m "feat: description"
-# edit files (auto-tracked)
-jj st
+jj bookmark create <feature-name> -r @   # bookmark tracks this change ID
+# ... work ... (auto-tracked)
+jj commit -m "feat: description"
+# bookmark already points at @- (the content) — no set needed
+jj git push -b <feature-name>
 ```
 
-### Commit and continue
-```bash
-jj commit -m "feat: description"
-# @ is now empty, ready for next task
-```
+### Why `@` not `@-` on create?
+The bookmark tracks the **change ID**, not the graph position. After `jj commit`, the change (with content) becomes `@-` and the bookmark still points at it.
+
+### Bookmark lifecycle
+- **Create before work**: `jj bookmark create <name> -r @` — gives agent context immediately
+- **After commit**: verify with `jj bookmark list` — bookmark should point at `@-`
+- **After PR merges**: clean up with `jj bookmark delete <feature-name>`
+- **Fix mispointed bookmark**: `jj bookmark set <name> -r <change-id>`
+
+### Workspaces in colocated repos
+Secondary workspaces created by `jj workspace add` lack a `.git/` directory. The `WorktreeCreate` hook handles this automatically by writing a `.envrc` that sets `$GIT_DIR`. If `gh` CLI is not working in a worktree, verify `direnv` is installed and run `direnv allow` (or `source .envrc`) in that directory.
+
+## Common Workflows
 
 ### Amend current change
 ```bash
@@ -66,21 +58,16 @@ jj describe -m "better message"     # change message only
 jj squash                           # fold @ into parent
 ```
 
-### PR lifecycle
+### Address PR review (rewrite)
 ```bash
-# Create:
-jj new main -m "feat: add feature"
-# ... work ...
-jj commit -m "feat: add feature"
-jj git push -c @-                   # auto-bookmark + push
-
-# Address review (rewrite):
 jj edit <change-id>                 # make it working copy
 # ... fix ...
 jj new                              # done editing
 jj git push                         # auto force-push
+```
 
-# Address review (additive):
+### Address PR review (additive)
+```bash
 jj new <bookmark-tip>
 # ... fix ...
 jj commit -m "address review"
@@ -88,11 +75,19 @@ jj bookmark set <name> -r @-
 jj git push -b <name>
 ```
 
-### Fetch and rebase
+### Sync after PR merge (fast-forward)
 ```bash
 jj git fetch
-jj rebase -d main
+jj bookmark set main -r main@origin   # advance local bookmark
 ```
+
+### Sync with local commits on top
+```bash
+jj git fetch
+jj bookmark set main -r main@origin
+jj rebase -d main@origin               # rebase YOUR commits, not main
+```
+> Never `jj rebase -s main` — `main` is an immutable tracked bookmark. Target the commit above it.
 
 ### Selective operations with filesets
 ```bash
@@ -130,7 +125,8 @@ jj interdiff --from <rev1> --to <rev2>
 | Amend | `git commit --amend` | `jj squash` or `jj describe -m "msg"` |
 | Push | `git push` | `jj git push` |
 | Fetch | `git fetch` | `jj git fetch` |
-| Pull | `git pull --rebase` | `jj git fetch && jj rebase -d main` |
+| Pull (fast-forward) | `git pull` | `jj git fetch && jj bookmark set main -r main@origin` |
+| Pull (rebase local) | `git pull --rebase` | `jj git fetch && jj rebase -d main@origin` |
 | Switch branch | `git checkout <branch>` | `jj new <rev>` or `jj edit <rev>` |
 | Create branch | `git checkout -b <name>` | `jj new main -m "desc"` (+ bookmark later) |
 | List branches | `git branch` | `jj bookmark list` |
@@ -173,18 +169,19 @@ Full mapping: see [references/git-to-jj.md](references/git-to-jj.md)
 ## Workspace Model
 
 - **Colocated**: both `.jj/` and `.git/` exist. Git tools read `.git/` naturally.
-- **Claude Code**: WorktreeCreate hook → `jj workspace add` (shared commit graph, isolated working copy).
+- **Claude Code**: `WorktreeCreate` hook → `jj workspace add` + `.envrc` for `$GIT_DIR`. Automatic.
 - **Codex**: built-in worktree toggle uses git worktrees; jj auto-imports changes.
-- `jj workspace` = shared commits across workspaces + isolated working copies. No merge needed.
+- **Multi-agent isolation**: one bookmark per agent/feature (see above) + workspace per agent for filesystem isolation.
 
 ## Common Pitfalls
 
-1. **Bookmarks don't auto-advance** after commit. Use `-r @-` explicitly after `jj commit`.
+1. **Bookmarks don't auto-advance** after commit. `bookmark create` tracks the change ID (stays correct). `bookmark set` on named bookmarks like `main` needs `-r @-` explicitly.
 2. **@ after jj commit is empty.** Content is in @-. Don't push @ — push @-.
 3. **jj new ≠ git commit.** `jj new` = new empty change. `jj commit` = finalize @.
 4. **:: is DAG range, .. is set difference.** They are NOT interchangeable.
 5. **Empty commits are normal** — they mean "ready to work here."
 6. **Forgot to describe?** Use `jj describe -m "msg"` on @ or `jj describe -m "msg" -r <rev>` on any mutable commit.
+7. **`Commit is immutable` error** — you targeted a tracked bookmark (e.g. `main`) directly in a rebase. Target the commit above it, or use `main@origin` as the destination instead.
 
 ## Troubleshooting
 

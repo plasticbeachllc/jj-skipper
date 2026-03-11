@@ -24,7 +24,9 @@ expected_files=(
   shared/skills/jj-guide/references/git-to-jj.md
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
-  claude-code/commands/jj-commit.md
+  claude-code/scripts/worktree-create.sh
+  claude-code/scripts/worktree-remove.sh
+  claude-code/commands/commit-push-pr.md
   claude-code/commands/develop.md
   claude-code/agents/jj-doctor.md
   codex/rules/jj-skipper.rules
@@ -74,6 +76,8 @@ executables=(
   shared/scripts/jj-guard.sh
   shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
+  claude-code/scripts/worktree-create.sh
+  claude-code/scripts/worktree-remove.sh
   codex/install.sh
 )
 
@@ -92,6 +96,8 @@ scripts=(
   shared/scripts/jj-guard.sh
   shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
+  claude-code/scripts/worktree-create.sh
+  claude-code/scripts/worktree-remove.sh
   codex/install.sh
 )
 
@@ -392,10 +398,10 @@ else
   pass "no dead 'openai.yaml' references"
 fi
 
-if grep -rq "worktree-create\|worktree-remove\|WorktreeCreate\|WorktreeRemove" claude-code/ 2>/dev/null; then
-  fail "dead worktree hook references still present"
+if grep -rq "openai\\.yaml" claude-code/ 2>/dev/null; then
+  fail "dead openai.yaml references in claude-code/"
 else
-  pass "no dead worktree hook references"
+  pass "no dead openai.yaml references in claude-code/"
 fi
 
 # ---------- Summary ----------

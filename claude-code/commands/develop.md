@@ -1,41 +1,36 @@
 ---
 name: develop
-description: Start or join a working change for isolated development. Safe for parallel agents.
+description: Enter isolated bookmark for parallel development. Each agent gets its own bookmark.
 ---
 
-# /develop — Start or Join a Working Change
+# /develop — Start Work on a New Bookmark
 
 Follow these steps exactly:
 
 ## 1. Check current state
 ```bash
 jj log -r '@ | @-' --limit 5
+jj bookmark list
 ```
 
-## 2. Decide: create or join
+## 2. Create bookmark
 
-**If @ is empty and sitting on main/trunk** (fresh state):
+Ask the user for a feature name (or derive from their task description).
+
 ```bash
-jj new main -m "feat: <description from user>"
+jj new main -m "feat: <description>"
+jj bookmark create <feature-name> -r @
 ```
 
-**If @ already has a description or changes** (another agent is working):
-Do NOT run `jj new`. You are joining an in-progress working change. Just start editing.
-Say:
-> Joining existing working change: **<change-id>** — "<description>"
+Confirm:
+> Working on bookmark **<feature-name>** (change **<change-id>**).
+> File edits auto-amend into this change. When done, run `/commit-push-pr`.
 
-## 3. Explain to user
-> You're working in change **<change-id>**.
->
-> - File edits auto-amend into this change.
-> - The file-lock hook prevents two agents from editing the same file.
-> - **Do NOT run `jj commit` or `jj new` while other agents are active.**
->   These commands move @ and would disrupt parallel work.
-> - When all agents are done, finalize with `jj commit -m "msg"`.
+## 3. Parallel safety rules
 
-## 4. Parallel safety rules
+These rules apply when agents **share a working copy**. Agents in separate workspaces (via WorktreeCreate) each have their own `@` and are not affected.
 
-**NEVER** run these commands while other agents may be active:
+**NEVER** run these commands while other agents share your working copy:
 - `jj commit` — snapshots working copy, moves @
 - `jj new` — moves @ to a new empty change
 - `jj edit` — switches @ to a different change
@@ -45,14 +40,3 @@ These are safe anytime:
 - `jj st` / `jj diff` / `jj log` (read-only)
 - `jj describe -m "msg"` (updates message only, no @ movement)
 - File edits via Write/Edit tools (guarded by file-lock)
-
-## 5. On completion (single agent or last agent standing)
-```bash
-jj commit -m "<conventional commit message>"
-jj log -r '@- | @'
-```
-
-Remind the user:
-> Content is in **@-**. To push:
-> - `jj git push -c @-` (auto-bookmark for PR)
-> - Or: `jj bookmark set <name> -r @-` then `jj git push -b <name>`

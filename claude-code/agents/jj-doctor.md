@@ -30,6 +30,8 @@ jj op log --limit 20
 | Merge conflicts | `×` in jj log | Edit files, `jj squash` into conflicted change |
 | Stuck rebase | Conflict chain | Resolve root conflict, descendants auto-update |
 | Wrong commit edited | Modified immutable | `jj undo` |
+| Immutable rebase | `rebase -s main` fails | Target commit above bookmark: `jj rebase -d main@origin` |
+| Stale local bookmark | `main` behind `main@origin` after PR merge | `jj git fetch && jj bookmark set main -r main@origin` |
 | Stale workspace | Out of sync | `jj workspace update-stale` |
 | Git sync issues | Push/fetch fails | `jj git import` / `jj git export`, then retry |
 | Orphaned commits | Not in default log | `jj log -r 'all()'`, then `jj new <id>` to recover |

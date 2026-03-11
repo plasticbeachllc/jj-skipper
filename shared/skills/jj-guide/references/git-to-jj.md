@@ -44,7 +44,8 @@
 | Push specific | `git push origin <branch>` | `jj git push -b <bookmark>` | |
 | Push new branch | `git push -u origin <branch>` | `jj git push -c <rev>` | Auto-creates bookmark from change description |
 | Fetch | `git fetch` | `jj git fetch` | |
-| Pull (rebase) | `git pull --rebase` | `jj git fetch && jj rebase -d main` | Two commands |
+| Pull (fast-forward) | `git pull` | `jj git fetch && jj bookmark set main -r main@origin` | Advances local bookmark |
+| Pull (rebase local) | `git pull --rebase` | `jj git fetch && jj rebase -d main@origin` | Rebases your commits; never `-s main` |
 | Clone | `git clone <url>` | `jj git clone <url>` | |
 | Add remote | `git remote add <name> <url>` | `jj git remote add <name> <url>` | |
 

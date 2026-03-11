@@ -20,10 +20,14 @@ Repos use **colocated mode** (`jj git init --colocate`) so both `.jj/` and `.git
 - **git-to-jj reference**: Complete command mapping from git to jj equivalents.
 
 ### Automation Layer (Claude Code)
-- **WorktreeCreate/Remove hooks**: Bridge Claude Code worktrees to `jj workspace` (shared commit graph, isolated working copy).
-- **`/jj-commit`**: Focused commits with selective file grouping and push reminders.
-- **`/develop`**: Enter an isolated jj workspace for parallel work.
+- **WorktreeCreate hook**: Bridges `jj workspace add` + `.envrc` for `$GIT_DIR`, so `gh` CLI works in secondary workspaces.
+- **`/develop`**: Create an isolated bookmark for parallel agent work.
+- **`/commit-push-pr`**: Commit, push bookmark, and open a PR on GitHub.
 - **jj-doctor**: Sub-agent for debugging lost commits, stale bookmarks, conflicts, and other VCS tangles.
+
+### Prerequisites
+- `jj`, `jq` (required)
+- `direnv` (recommended — enables automatic `$GIT_DIR` in worktrees; fallback: `source .envrc`)
 
 ## Installation
 
@@ -53,16 +57,29 @@ Add to your project's `CLAUDE.md` or `AGENTS.md`:
 ```markdown
 ## Version Control
 
-This project uses jj (Jujutsu) exclusively for version control. The repo is colocated
-(both .jj/ and .git/ exist) but all VCS operations MUST use jj commands, never git.
+This project uses jj (Jujutsu) exclusively. The repo is colocated (.jj/ and .git/ both
+exist). All VCS writes use jj. Git reads work naturally.
 
-Use the jj-guide skill for command reference. If VCS state gets tangled, invoke jj-doctor.
+**Multi-agent model: one bookmark per agent/feature.**
 
-Key rules:
-- Never run git commands directly (use jj equivalents)
-- After `jj commit`, the commit with content is @- (parent), not @ (empty working copy)
-- Use `jj git push -c @-` for auto-bookmark PR branches
-- Use `jj bookmark set <name> -r @-` then `jj git push -b <name>` for named branches
+Before doing any work, create a bookmark:
+  jj new main -m "feat: description"
+  jj bookmark create <feature-name> -r @
+
+After committing, the content is at @- (parent). @ is always an empty working copy.
+
+To push:
+  jj git push -b <feature-name>
+
+To sync after a PR merges on GitHub:
+  jj git fetch
+  jj bookmark set main -r main@origin
+
+Claude Code handles workspace creation automatically via the WorktreeCreate hook.
+If gh CLI doesn't work in a worktree, run `direnv allow` or `source .envrc`.
+
+Use the jj-guide skill for full reference. Use /commit-push-pr to ship code.
+If VCS state gets tangled, invoke jj-doctor.
 ```
 
 ## Repository Structure
@@ -75,6 +92,7 @@ jj-skipper/
 │   │   └── references/git-to-jj.md
 │   └── scripts/
 │       ├── jj-guard.sh             # Git command interceptor
+│       ├── file-lock.sh            # Parallel agent file-level locking
 │       └── cleanup-workspace.sh    # Workspace cleanup helper
 │
 ├── claude-code/                     # Claude Code adapter
@@ -82,7 +100,7 @@ jj-skipper/
 │   ├── hooks/hooks.json            # PreToolUse + Worktree hooks
 │   ├── scripts/                    # Worktree bridge scripts
 │   ├── skills/jj-guide             # Symlink → ../../shared/skills/jj-guide
-│   ├── commands/                   # /jj-commit, /develop
+│   ├── commands/                   # /commit-push-pr, /develop
 │   └── agents/jj-doctor.md        # VCS debugger sub-agent
 │
 ├── codex/                           # Codex adapter
@@ -112,7 +130,8 @@ Symlinks keep it DRY — shared content is edited once, used by both adapters. C
 | `git status` | `jj st` |
 | `git add . && git commit -m "msg"` | `jj commit -m "msg"` |
 | `git push` | `jj git push` |
-| `git pull --rebase` | `jj git fetch && jj rebase -d main` |
+| `git pull` | `jj git fetch && jj bookmark set main -r main@origin` |
+| `git pull --rebase` | `jj git fetch && jj rebase -d main@origin` |
 | `git checkout -b feat` | `jj new main -m "feat: desc"` |
 | `git stash` | `jj new` |
 | `git log` | `jj log` |

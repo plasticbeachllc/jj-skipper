@@ -104,7 +104,7 @@ case "$git_subcmd" in
   add)         jj_equiv="(not needed — jj tracks all changes automatically)" ;;
   commit)      jj_equiv="jj commit -m 'msg'" ;;
   push)        jj_equiv="jj git push" ;;
-  pull)        jj_equiv="jj git fetch && jj rebase -d main" ;;
+  pull)        jj_equiv="jj git fetch && jj bookmark set main -r main@origin (then jj rebase -d main@origin if local commits exist)" ;;
   fetch)       jj_equiv="jj git fetch" ;;
   clone)       jj_equiv="jj git clone" ;;
   init)        jj_equiv="jj git init" ;;

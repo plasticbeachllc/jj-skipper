@@ -32,6 +32,12 @@ else
   echo "Warning: jj not found in PATH, skipping workspace forget" >&2
 fi
 
+# Remove .envrc before directory removal (avoid stale GIT_DIR pointers)
+if [[ -f "$workspace_dir/.envrc" ]]; then
+  direnv deny "$workspace_dir" 2>/dev/null || true
+  rm -f "$workspace_dir/.envrc"
+fi
+
 # Remove the workspace directory if it exists
 if [[ -d "$workspace_dir" ]]; then
   rm -rf "$workspace_dir"

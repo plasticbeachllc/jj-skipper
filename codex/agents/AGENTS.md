@@ -1,14 +1,31 @@
 # jj-skipper — Codex Agent Instructions
 
-Use **jj** exclusively for version control. Projects are colocated (both `.jj/` and `.git/` exist) but all VCS operations MUST use jj commands, never git directly.
+This project uses jj exclusively. The repo is colocated (`.jj/` and `.git/` both exist). All VCS writes use jj. Git reads work naturally.
 
 ## Rules
 
-- **Never run git commands.** Use jj equivalents. The jj-guide skill has full mappings.
+- **Never run git commands.** Use jj equivalents.
 - **Always use `-m` flags.** Without `-m`, editors open and hang the agent.
 - **Never use `-i` flags.** Interactive TUI will hang.
-- **After `jj commit -m "msg"`**: the content is in **@-** (parent). New **@** is empty. Target @- for bookmarks and pushes.
 - **Use change IDs** (letters like `nmwwolux`) over commit IDs (hex). Change IDs are stable across rewrites.
+
+## Workflow: One Bookmark per Feature
+
+```bash
+jj new main -m "feat: description"
+jj bookmark create <feature-name> -r @
+# ... work ...
+jj commit -m "feat: description"
+jj git push -b <feature-name>
+```
+
+After `jj commit`, content is at `@-`. The bookmark tracks the change ID and stays pointed correctly.
+
+To sync after a PR merges:
+```bash
+jj git fetch
+jj bookmark set main -r main@origin
+```
 
 ## Quick Reference
 
@@ -17,26 +34,11 @@ Use **jj** exclusively for version control. Projects are colocated (both `.jj/` 
 | `git status` | `jj st` |
 | `git add . && git commit -m "msg"` | `jj commit -m "msg"` |
 | `git push` | `jj git push` |
-| `git pull --rebase` | `jj git fetch && jj rebase -d main` |
+| `git pull` | `jj git fetch && jj bookmark set main -r main@origin` |
+| `git pull --rebase` | `jj git fetch && jj rebase -d main@origin` |
 | `git checkout -b feat` | `jj new main -m "feat: desc"` |
-| `git stash` | `jj new` |
 | `git log` | `jj log` |
 | Undo anything | `jj undo` |
-
-## Push Patterns
-
-### Named bookmark (main, long-lived branches):
-```bash
-jj commit -m "message"
-jj bookmark set main -r @-
-jj git push -b main
-```
-
-### Auto-bookmark (PR feature branches):
-```bash
-jj commit -m "feat: add thing"
-jj git push -c @-
-```
 
 ## Troubleshooting
 
