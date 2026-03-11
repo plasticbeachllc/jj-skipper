@@ -1,0 +1,28 @@
+# jj-skipper: Block git commands in jj repositories.
+# Installed to ~/.codex/rules/jj-skipper.rules
+#
+# WARNING: This blocks ALL "git" commands globally across all Codex sessions.
+# For repos still using plain git, remove this rule:
+#   rm ~/.codex/rules/jj-skipper.rules
+
+prefix_rule(
+    pattern = ["git"],
+    decision = "forbidden",
+    justification = "This is a jj repository. Use jj commands instead. See the jj-guide skill for mappings. For git-only ops (submodule, lfs), temporarily remove this rule.",
+    match = [
+        "git status",
+        "git commit -m 'test'",
+        "git push origin main",
+        "git checkout -b feature",
+        "git diff",
+        "git log",
+        "git add .",
+        "git stash",
+    ],
+    not_match = [
+        "jj git push",
+        "jj st",
+        "jj commit -m 'test'",
+        "jj log",
+    ],
+)
