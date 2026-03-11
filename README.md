@@ -100,7 +100,6 @@ jj-skipper/
 │   ├── hooks/hooks.json            # PreToolUse + Worktree hooks
 │   ├── scripts/                    # Worktree bridge scripts
 │   ├── skills/jj-guide             # Symlink → ../../shared/skills/jj-guide
-│   ├── commands/                   # /commit-push-pr, /develop
 │   └── agents/jj-doctor.md        # VCS debugger sub-agent
 │
 ├── codex/                           # Codex adapter

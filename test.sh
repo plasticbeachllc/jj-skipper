@@ -27,8 +27,6 @@ expected_files=(
   claude-code/hooks/hooks.json
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
-  claude-code/commands/commit-push-pr.md
-  claude-code/commands/develop.md
   claude-code/agents/jj-doctor.md
   codex/rules/jj-skipper.rules
   codex/install.sh
@@ -137,7 +135,7 @@ done
 section "Plugin auto-discovery (default directories)"
 
 plugin_root="claude-code"
-for dir in hooks commands agents skills; do
+for dir in hooks agents skills; do
   if [[ -d "$plugin_root/$dir" ]]; then
     pass "plugin has $dir/ directory"
   else
