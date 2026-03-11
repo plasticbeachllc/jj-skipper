@@ -1,0 +1,24 @@
+{
+  "name": "jj-skipper",
+  "owner": {
+    "name": "Plastic Beach, LLC",
+    "email": "info@plasticbeach.email"
+  },
+  "metadata": {
+    "description": "Makes jj (Jujutsu) the native VCS for AI coding agents"
+  },
+  "plugins": [
+    {
+      "name": "jj-skipper",
+      "description": "Guards against git mutations, provides jj knowledge, and bridges worktrees to jj workspaces.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Plastic Beach, LLC",
+        "email": "info@plasticbeach.email"
+      },
+      "source": "./claude-code",
+      "category": "development",
+      "homepage": "https://github.com/plasticbeachllc/jj-skipper"
+    }
+  ]
+}
