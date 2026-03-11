@@ -20,6 +20,7 @@ expected_files=(
   shared/scripts/jj-guard.sh
   shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
+  shared/scripts/workspace-create.sh
   shared/skills/jj-guide/SKILL.md
   shared/skills/jj-guide/references/git-to-jj.md
   claude-code/.claude-plugin/plugin.json
@@ -51,9 +52,13 @@ section "Symlinks"
 
 expected_links=(
   "claude-code/skills/jj-guide"
+  "claude-code/skills/commit-push-pr"
+  "claude-code/skills/develop"
   "claude-code/scripts/jj-guard.sh"
   "claude-code/scripts/file-lock.sh"
   "codex/skills/jj-guide"
+  "codex/skills/commit-push-pr"
+  "codex/skills/develop"
 )
 
 for link in "${expected_links[@]}"; do
@@ -76,6 +81,7 @@ executables=(
   shared/scripts/jj-guard.sh
   shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
+  shared/scripts/workspace-create.sh
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
   codex/install.sh
@@ -96,6 +102,7 @@ scripts=(
   shared/scripts/jj-guard.sh
   shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
+  shared/scripts/workspace-create.sh
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
   codex/install.sh
@@ -377,10 +384,22 @@ else
   fail "SKILL.md not accessible through installed skill"
 fi
 
+if [[ -d "$tmpdir/codex/skills/commit-push-pr" ]]; then
+  pass "skill installed to \$CODEX_HOME/skills/commit-push-pr"
+else
+  fail "commit-push-pr skill not found in \$CODEX_HOME/skills/"
+fi
+
 if [[ -f "$tmpdir/codex/rules/jj-skipper.rules" ]]; then
   pass "rules installed to \$CODEX_HOME/rules/jj-skipper.rules"
 else
   fail "rules not found in \$CODEX_HOME/rules/"
+fi
+
+if [[ -f "$tmpdir/codex/AGENTS.md" ]] && grep -q "jj-skipper" "$tmpdir/codex/AGENTS.md"; then
+  pass "jj-skipper block appended to \$CODEX_HOME/AGENTS.md"
+else
+  fail "jj-skipper block not found in \$CODEX_HOME/AGENTS.md"
 fi
 
 # ---------- Content checks ----------
