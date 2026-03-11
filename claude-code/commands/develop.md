@@ -1,9 +1,10 @@
 ---
 name: develop
-description: Enter isolated bookmark for parallel development. Each agent gets its own bookmark.
+description: Enter isolated workspace and bookmark for parallel development.
+isolation: worktree
 ---
 
-# /develop — Start Work on a New Bookmark
+# /develop — Start Work in an Isolated Workspace
 
 Follow these steps exactly:
 
@@ -23,20 +24,5 @@ jj bookmark create <feature-name> -r @
 ```
 
 Confirm:
-> Working on bookmark **<feature-name>** (change **<change-id>**).
+> Working on bookmark **<feature-name>** (change **<change-id>**) in an isolated workspace.
 > File edits auto-amend into this change. When done, run `/commit-push-pr`.
-
-## 3. Parallel safety rules
-
-These rules apply when agents **share a working copy**. Agents in separate workspaces (via WorktreeCreate) each have their own `@` and are not affected.
-
-**NEVER** run these commands while other agents share your working copy:
-- `jj commit` — snapshots working copy, moves @
-- `jj new` — moves @ to a new empty change
-- `jj edit` — switches @ to a different change
-- `jj squash` — modifies commit graph
-
-These are safe anytime:
-- `jj st` / `jj diff` / `jj log` (read-only)
-- `jj describe -m "msg"` (updates message only, no @ movement)
-- File edits via Write/Edit tools (guarded by file-lock)
