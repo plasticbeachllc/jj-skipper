@@ -1,15 +1,10 @@
 {
   "name": "jj-skipper",
-  "version": "0.1.0",
   "description": "Makes jj (Jujutsu) the native VCS for AI coding agents. Guards against git mutations, provides jj knowledge, and bridges worktrees to jj workspaces.",
   "author": {
     "name": "Plastic Beach LLC",
     "url": "https://github.com/plasticbeachllc"
   },
   "repository": "https://github.com/plasticbeachllc/jj-skipper",
-  "license": "MIT",
-  "hooks": "./hooks/hooks.json",
-  "skills": "./skills/",
-  "commands": "./commands/",
-  "agents": "./agents/"
+  "license": "MIT"
 }
