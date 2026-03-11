@@ -1,7 +1,6 @@
 ---
-name: commit-push-pr
-description: "Commit, push bookmark, and open a PR on GitHub. Activate when the user
-wants to ship code, open a PR, push changes, or finalize work on a bookmark."
+name: jj-commit-push-pr
+description: Commit, push bookmark, and open a PR on GitHub. Activate when the user wants to ship code, open a PR, push changes, or finalize work on a bookmark.
 ---
 
 # Commit, Push, and Open PR

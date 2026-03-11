@@ -1,8 +1,6 @@
 ---
 name: jj-guide
-description: "REQUIRED for any VCS operation in jj repositories (.jj/ directory present).
-Activate on: commit, push, pull, status, diff, log, branch, PR, merge, rebase, stash,
-or any version control task. In jj repos: use jj commands exclusively, never git."
+description: REQUIRED for any VCS operation in jj repositories (.jj/ directory present). Activate on commit, push, pull, status, diff, log, branch, PR, merge, rebase, stash, or any version control task. In jj repos use jj commands exclusively, never git.
 ---
 
 # jj Guide for AI Agents

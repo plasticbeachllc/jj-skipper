@@ -1,7 +1,6 @@
 ---
-name: develop
-description: "Create an isolated jj workspace and bookmark for parallel development.
-Activate when starting new work, creating a feature branch, or entering a workspace."
+name: jj-develop
+description: Create an isolated jj workspace and bookmark for parallel development. Activate when starting new work, creating a feature branch, or entering a workspace.
 ---
 
 # Start Work in an Isolated Workspace
