@@ -9,26 +9,13 @@
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/jj-guard.sh"
           }
         ]
-      }
-    ],
-    "WorktreeCreate": [
+      },
       {
-        "matcher": "*",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-create.sh"
-          }
-        ]
-      }
-    ],
-    "WorktreeRemove": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-remove.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/file-lock.sh"
           }
         ]
       }

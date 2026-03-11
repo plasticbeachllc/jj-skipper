@@ -18,13 +18,12 @@ section "Repository structure"
 
 expected_files=(
   shared/scripts/jj-guard.sh
+  shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
   shared/skills/jj-guide/SKILL.md
   shared/skills/jj-guide/references/git-to-jj.md
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
-  claude-code/scripts/worktree-create.sh
-  claude-code/scripts/worktree-remove.sh
   claude-code/commands/jj-commit.md
   claude-code/commands/develop.md
   claude-code/agents/jj-doctor.md
@@ -51,6 +50,7 @@ section "Symlinks"
 expected_links=(
   "claude-code/skills/jj-guide"
   "claude-code/scripts/jj-guard.sh"
+  "claude-code/scripts/file-lock.sh"
   "codex/skills/jj-guide"
 )
 
@@ -72,9 +72,8 @@ section "Executable bits"
 
 executables=(
   shared/scripts/jj-guard.sh
+  shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
-  claude-code/scripts/worktree-create.sh
-  claude-code/scripts/worktree-remove.sh
   codex/install.sh
 )
 
@@ -91,9 +90,8 @@ section "Shell script syntax (bash -n)"
 
 scripts=(
   shared/scripts/jj-guard.sh
+  shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
-  claude-code/scripts/worktree-create.sh
-  claude-code/scripts/worktree-remove.sh
   codex/install.sh
 )
 
@@ -111,6 +109,7 @@ section "JSON validity"
 json_files=(
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
+  .claude-plugin/marketplace.json
 )
 
 for j in "${json_files[@]}"; do
@@ -121,21 +120,15 @@ for j in "${json_files[@]}"; do
   fi
 done
 
-# ---------- plugin.json paths ----------
-section "plugin.json path references"
+# ---------- Auto-discovery structure ----------
+section "Plugin auto-discovery (default directories)"
 
 plugin_root="claude-code"
-hooks_path=$(jq -r '.hooks' "$plugin_root/.claude-plugin/plugin.json")
-skills_path=$(jq -r '.skills' "$plugin_root/.claude-plugin/plugin.json")
-commands_path=$(jq -r '.commands' "$plugin_root/.claude-plugin/plugin.json")
-agents_path=$(jq -r '.agents' "$plugin_root/.claude-plugin/plugin.json")
-
-for ref in "$hooks_path" "$skills_path" "$commands_path" "$agents_path"; do
-  resolved="$plugin_root/${ref#./}"
-  if [[ -e "$resolved" ]]; then
-    pass "plugin.json -> $ref resolves to $resolved"
+for dir in hooks commands agents skills; do
+  if [[ -d "$plugin_root/$dir" ]]; then
+    pass "plugin has $dir/ directory"
   else
-    fail "plugin.json -> $ref does not resolve (expected $resolved)"
+    fail "plugin missing $dir/ directory"
   fi
 done
 
@@ -294,6 +287,66 @@ else
   fail "should allow gitk"
 fi
 
+# ---------- File lock ----------
+section "file-lock.sh functional tests"
+
+lock="shared/scripts/file-lock.sh"
+
+# Clean up any test locks
+rm -rf /tmp/jj-skipper-locks
+
+# Session A acquires lock
+if echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-AAA","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
+  pass "session A acquires file lock"
+else
+  fail "session A should acquire file lock"
+fi
+
+# Session B blocked on same file
+if echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
+  fail "session B should be blocked on same file"
+else
+  pass "session B blocked on locked file"
+fi
+
+# Session A re-edits same file (refresh)
+if echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-AAA","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
+  pass "session A re-edits same file (allowed)"
+else
+  fail "session A should re-edit own locked file"
+fi
+
+# Session B edits different file
+if echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/lock-other.txt"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
+  pass "session B edits different file (allowed)"
+else
+  fail "session B should edit different file"
+fi
+
+# Edit tool also guarded
+if echo '{"tool_name":"Edit","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
+  fail "Edit tool should also be blocked"
+else
+  pass "Edit tool blocked on locked file"
+fi
+
+# Bash tool passes through
+if echo '{"tool_name":"Bash","tool_input":{"command":"echo hi"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
+  pass "Bash tool passes through file lock"
+else
+  fail "Bash tool should pass through"
+fi
+
+# Read tool passes through
+if echo '{"tool_name":"Read","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
+  pass "Read tool passes through file lock"
+else
+  fail "Read tool should pass through"
+fi
+
+# Clean up test locks
+rm -rf /tmp/jj-skipper-locks
+
 # ---------- Codex install.sh dry run ----------
 section "Codex install.sh (dry run in temp dir)"
 
@@ -337,6 +390,12 @@ if grep -rq "openai\.yaml" shared/ claude-code/ codex/ 2>/dev/null; then
   fail "dead 'openai.yaml' still referenced"
 else
   pass "no dead 'openai.yaml' references"
+fi
+
+if grep -rq "worktree-create\|worktree-remove\|WorktreeCreate\|WorktreeRemove" claude-code/ 2>/dev/null; then
+  fail "dead worktree hook references still present"
+else
+  pass "no dead worktree hook references"
 fi
 
 # ---------- Summary ----------
