@@ -1,11 +1,11 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "jj-skipper",
+  "version": "0.1.0",
+  "description": "Makes jj (Jujutsu) the native VCS for AI coding agents",
   "owner": {
     "name": "Plastic Beach, LLC",
     "email": "info@plasticbeach.email"
-  },
-  "metadata": {
-    "description": "Makes jj (Jujutsu) the native VCS for AI coding agents"
   },
   "plugins": [
     {
@@ -17,8 +17,7 @@
         "email": "info@plasticbeach.email"
       },
       "source": "./claude-code",
-      "category": "development",
-      "homepage": "https://github.com/plasticbeachllc/jj-skipper"
+      "category": "development"
     }
   ]
 }
