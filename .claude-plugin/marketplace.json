@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "jj-skipper",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Makes jj (Jujutsu) the native VCS for AI coding agents",
   "owner": {
     "name": "Plastic Beach, LLC",
@@ -11,7 +11,7 @@
     {
       "name": "jj-skipper",
       "description": "Guards against git mutations, provides jj knowledge, and bridges worktrees to jj workspaces.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "author": {
         "name": "Plastic Beach, LLC",
         "email": "info@plasticbeach.email"
