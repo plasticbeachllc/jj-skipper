@@ -44,42 +44,6 @@ if [[ "$command" == ":;git "* ]]; then
   exit 0
 fi
 
-# --- Parallel-agent guard: block jj mutations when other sessions are active ---
-if [[ "$command" == jj\ commit* || "$command" == jj\ new* || "$command" == jj\ edit\ * || "$command" == jj\ squash* ]]; then
-  session_id=""
-  if [[ -n "${input:-}" ]] && command -v jq &>/dev/null; then
-    session_id=$(jq -r '.session_id // empty' <<< "$input")
-  fi
-
-  if [[ -n "$session_id" ]]; then
-    # Find lock dir for current repo
-    repo_hash=$(echo "$(pwd)" | shasum -a 256 | cut -c1-12)
-    lock_dir="/tmp/jj-skipper-locks/$repo_hash"
-
-    if [[ -d "$lock_dir" ]]; then
-      now=$(date +%s)
-      other_sessions=0
-      for lf in "$lock_dir"/*.lock; do
-        [[ -f "$lf" ]] || continue
-        lock_session=$(head -1 "$lf" 2>/dev/null || echo "")
-        [[ "$lock_session" == "$session_id" ]] && continue
-        # Check if lock is fresh (< 10 min)
-        lock_mtime=$(stat -f %m "$lf" 2>/dev/null || stat -c %Y "$lf" 2>/dev/null || echo 0)
-        lock_age=$((now - lock_mtime))
-        [[ $lock_age -lt 600 ]] && other_sessions=$((other_sessions + 1))
-      done
-
-      if [[ $other_sessions -gt 0 ]]; then
-        jj_subcmd=$(echo "$command" | awk '{print $2}')
-        deny "Parallel agent safety: '$jj_subcmd' blocked while $other_sessions other session(s) hold file locks.
-  Commands that move @ (commit, new, edit, squash) are unsafe during parallel work.
-  Wait until other agents finish, or ask the user to coordinate.
-  Safe alternatives: jj st, jj diff, jj log, jj describe -m 'msg', file edits."
-      fi
-    fi
-  fi
-fi
-
 # Only intercept commands starting with "git "
 [[ "$command" != git\ * ]] && exit 0
 
