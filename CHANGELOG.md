@@ -6,6 +6,8 @@
 - **Added**: Multi-agent parallel workflows section in README
 - **Fixed**: Test suite — removed stale `file-lock.sh` references (removed in v0.4.1), fixed symlink expectations for `jj-` prefixed skill names, fixed guard tests to work without `.jj/` directory, graceful skip when `jj` is not installed
 - **Fixed**: README repo structure — reflects current state (no `file-lock.sh`, all skills listed, correct naming)
+- **Fixed**: Inlined all `claude-code/scripts/` (jj-guard, worktree-create, worktree-remove) — no more cross-directory symlinks that break in plugin cache
+- **Removed**: `shared/scripts/` directory — all scripts now live directly in their platform adapter
 
 ## 0.4.2 — 2026-03-11
 

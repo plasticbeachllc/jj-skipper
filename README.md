@@ -95,10 +95,6 @@ jj-skipper/
 │   │   │   └── SKILL.md
 │   │   └── jj-workspace/          # Workspace creation skill
 │   │       └── SKILL.md
-│   └── scripts/
-│       ├── jj-guard.sh             # Git command interceptor
-│       ├── workspace-create.sh     # Isolated workspace setup
-│       └── cleanup-workspace.sh    # Workspace cleanup helper
 │
 ├── claude-code/                     # Claude Code adapter
 │   ├── .claude-plugin/plugin.json
@@ -124,7 +120,7 @@ jj-skipper/
 └── CHANGELOG.md
 ```
 
-Symlinks keep it DRY — shared content is edited once, used by both adapters. Claude Code uses real directory copies for plugin cache compatibility. Codex `install.sh` falls back to file copy if symlinks aren't supported.
+Shared skills are the single source of truth. Claude Code uses real copies for plugin cache compatibility. Codex symlinks to shared skills (`install.sh` falls back to copy if needed). Claude Code scripts (guard, worktree hooks) are self-contained — no cross-directory references that break in the plugin cache.
 
 ## Multi-Agent Parallel Workflows
 

@@ -77,7 +77,7 @@ fi
 echo ""
 echo "jj-skipper installed for Codex."
 echo ""
-echo "  Skills: $SKILLS_DIR/{jj-guide,commit-push-pr}"
+echo "  Skills: $SKILLS_DIR/{jj-guide,jj-commit-push-pr,jj-workspace}"
 echo "  Rules:  $RULES_DIR/jj-skipper.rules (blocks all 'git' commands)"
 echo "  Agent:  $AGENTS_MD (jj workflow instructions)"
 echo ""

@@ -17,9 +17,6 @@ section() { echo ""; echo "=== $1 ==="; }
 section "Repository structure"
 
 expected_files=(
-  shared/scripts/jj-guard.sh
-  shared/scripts/cleanup-workspace.sh
-  shared/scripts/workspace-create.sh
   shared/skills/jj-guide/SKILL.md
   shared/skills/jj-guide/references/git-to-jj.md
   shared/skills/commit-push-pr/SKILL.md
@@ -50,7 +47,6 @@ done
 section "Symlinks"
 
 expected_links=(
-  "claude-code/scripts/jj-guard.sh"
   "codex/skills/jj-guide"
   "codex/skills/jj-commit-push-pr"
   "codex/skills/jj-workspace"
@@ -89,9 +85,7 @@ done
 section "Executable bits"
 
 executables=(
-  shared/scripts/jj-guard.sh
-  shared/scripts/cleanup-workspace.sh
-  shared/scripts/workspace-create.sh
+  claude-code/scripts/jj-guard.sh
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
   codex/install.sh
@@ -109,9 +103,7 @@ done
 section "Shell script syntax (bash -n)"
 
 scripts=(
-  shared/scripts/jj-guard.sh
-  shared/scripts/cleanup-workspace.sh
-  shared/scripts/workspace-create.sh
+  claude-code/scripts/jj-guard.sh
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
   codex/install.sh
@@ -261,7 +253,7 @@ fi  # end jj installed check
 # ---------- Guard script ----------
 section "jj-guard.sh functional tests"
 
-guard="shared/scripts/jj-guard.sh"
+guard="claude-code/scripts/jj-guard.sh"
 
 # Create a temp directory with .jj to simulate a jj repo
 guard_tmpdir=$(mktemp -d)
