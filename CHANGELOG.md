@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1 — 2026-03-11
+
+- **Removed**: File-lock mechanism and parallel-agent guard — isolated workspaces make file-level locking unnecessary
+
 ## 0.4.0 — 2026-03-11
 
 - **Renamed**: `jj-develop` skill → `jj-workspace`, inlined workspace creation (no external script dependency)
