@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2 — 2026-03-11
+
+- **Cleanup**: Renamed codex skills with `jj-` prefix for consistency, removed broken `develop` symlink, deleted PLAN.md
+
 ## 0.4.1 — 2026-03-11
 
 - **Removed**: File-lock mechanism and parallel-agent guard — isolated workspaces make file-level locking unnecessary
