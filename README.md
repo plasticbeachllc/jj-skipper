@@ -21,7 +21,7 @@ Repos use **colocated mode** (`jj git init --colocate`) so both `.jj/` and `.git
 
 ### Automation Layer (Claude Code)
 - **WorktreeCreate hook**: Bridges `jj workspace add` + `.envrc` for `$GIT_DIR`, so `gh` CLI works in secondary workspaces.
-- **`/develop`**: Create an isolated bookmark for parallel agent work.
+- **`/jj-workspace`**: Create an isolated workspace and bookmark for parallel agent work.
 - **`/commit-push-pr`**: Commit, push bookmark, and open a PR on GitHub.
 - **jj-doctor**: Sub-agent for debugging lost commits, stale bookmarks, conflicts, and other VCS tangles.
 
