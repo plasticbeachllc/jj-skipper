@@ -21,7 +21,7 @@
 
 - **Renamed**: `jj-develop` skill → `jj-workspace`, inlined workspace creation (no external script dependency)
 - **Fixed**: Plugin cache compatibility — skills use real copies instead of symlinks
-- **Added**: `jj-guide` cross-references to workspace and commit-push-pr skills
+- **Added**: `jj-guide` cross-references to workspace and jj-commit-push-pr skills
 
 ## 0.1.0 — 2026-03-10
 

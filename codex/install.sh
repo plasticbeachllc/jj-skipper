@@ -52,7 +52,7 @@ jj git fetch
 jj bookmark set main -r main@origin
 \`\`\`
 
-Use the jj-guide skill for full reference. Use the commit-push-pr skill to ship code.
+Use the jj-guide skill for full reference. Use the jj-commit-push-pr skill to ship code.
 $MARKER"
 
 if [ -f "$AGENTS_MD" ] && grep -q "$MARKER" "$AGENTS_MD"; then

@@ -19,7 +19,7 @@ section "Repository structure"
 expected_files=(
   shared/skills/jj-guide/SKILL.md
   shared/skills/jj-guide/references/git-to-jj.md
-  shared/skills/commit-push-pr/SKILL.md
+  shared/skills/jj-commit-push-pr/SKILL.md
   shared/skills/jj-workspace/SKILL.md
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
@@ -346,7 +346,7 @@ else
   fail "SKILL.md not accessible through installed skill"
 fi
 
-if [[ -d "$tmpdir/codex/skills/commit-push-pr" ]] || [[ -d "$tmpdir/codex/skills/jj-workspace" ]]; then
+if [[ -d "$tmpdir/codex/skills/jj-commit-push-pr" ]] || [[ -d "$tmpdir/codex/skills/jj-workspace" ]]; then
   pass "additional skills installed to \$CODEX_HOME/skills/"
 else
   fail "additional skills not found in \$CODEX_HOME/skills/"

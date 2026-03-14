@@ -22,7 +22,7 @@ Repos use **colocated mode** (`jj git init --colocate`) so both `.jj/` and `.git
 ### Automation Layer (Claude Code)
 - **WorktreeCreate hook**: Bridges `jj workspace add` + `.envrc` for `$GIT_DIR`, so `gh` CLI works in secondary workspaces.
 - **`/jj-workspace`**: Create an isolated workspace and bookmark for parallel agent work.
-- **`/commit-push-pr`**: Commit, push bookmark, and open a PR on GitHub.
+- **`/jj-commit-push-pr`**: Commit, push bookmark, and open a PR on GitHub.
 - **jj-doctor**: Sub-agent for debugging lost commits, stale bookmarks, conflicts, and other VCS tangles.
 
 ### Prerequisites
@@ -78,7 +78,7 @@ To sync after a PR merges on GitHub:
 Claude Code handles workspace creation automatically via the WorktreeCreate hook.
 If gh CLI doesn't work in a worktree, run `direnv allow` or `source .envrc`.
 
-Use the jj-guide skill for full reference. Use /commit-push-pr to ship code.
+Use the jj-guide skill for full reference. Use /jj-commit-push-pr to ship code.
 If VCS state gets tangled, invoke jj-doctor.
 ```
 
@@ -91,7 +91,7 @@ jj-skipper/
 │   │   ├── jj-guide/              # Core jj knowledge (both platforms)
 │   │   │   ├── SKILL.md
 │   │   │   └── references/git-to-jj.md
-│   │   ├── commit-push-pr/        # Ship code skill
+│   │   ├── jj-commit-push-pr/     # Ship code skill
 │   │   │   └── SKILL.md
 │   │   └── jj-workspace/          # Workspace creation skill
 │   │       └── SKILL.md
