@@ -28,6 +28,8 @@ or any version control task. In jj repos: use jj commands exclusively, never git
 
 Each agent operates on its own named bookmark, branched from `main`. Isolation is structural — one bookmark per concern, not reactive splitting after the fact.
 
+Use `/jj-status` before pushing to check for file conflicts with other agents' bookmarks.
+
 ### Start work (one bookmark per agent/feature)
 
 Use `/jj-workspace` to create an isolated workspace with GIT_DIR wiring, or manually:

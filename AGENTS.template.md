@@ -46,4 +46,6 @@ If `gh` CLI doesn't work in a worktree, run `direnv allow` or `source .envrc`.
 | `git log` | `jj log` |
 | `git stash` | `jj new` |
 
-Use the jj-guide skill for full reference. Use `/commit-push-pr` to ship code. If VCS state gets tangled, invoke jj-doctor.
+Use the jj-guide skill for full reference. Use `/commit-push-pr` to ship code.
+Use `/jj-status` before pushing to check for conflicts with other agents.
+If VCS state gets tangled, invoke jj-doctor.

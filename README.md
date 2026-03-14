@@ -87,23 +87,35 @@ If VCS state gets tangled, invoke jj-doctor.
 ```
 jj-skipper/
 ├── shared/                          # Platform-agnostic content
-│   ├── skills/jj-guide/            # Core jj knowledge (both platforms)
-│   │   ├── SKILL.md
-│   │   └── references/git-to-jj.md
+│   ├── skills/
+│   │   ├── jj-guide/              # Core jj knowledge (both platforms)
+│   │   │   ├── SKILL.md
+│   │   │   └── references/git-to-jj.md
+│   │   ├── commit-push-pr/        # Ship code skill
+│   │   │   └── SKILL.md
+│   │   └── jj-workspace/          # Workspace creation skill
+│   │       └── SKILL.md
 │   └── scripts/
 │       ├── jj-guard.sh             # Git command interceptor
-│       ├── file-lock.sh            # Parallel agent file-level locking
-│       └── cleanup-workspace.sh    # Workspace cleanup helper
+│       ├── workspace-create.sh     # Isolated workspace setup
+│       ├── cleanup-workspace.sh    # Workspace cleanup helper
+│       └── agent-status.sh         # Multi-agent coordination
 │
 ├── claude-code/                     # Claude Code adapter
 │   ├── .claude-plugin/plugin.json
 │   ├── hooks/hooks.json            # PreToolUse + Worktree hooks
 │   ├── scripts/                    # Worktree bridge scripts
-│   ├── skills/jj-guide             # Symlink → ../../shared/skills/jj-guide
+│   ├── skills/                     # Real directories (plugin cache compatible)
+│   │   ├── jj-guide/
+│   │   ├── jj-commit-push-pr/
+│   │   └── jj-workspace/
 │   └── agents/jj-doctor.md        # VCS debugger sub-agent
 │
 ├── codex/                           # Codex adapter
-│   ├── skills/jj-guide             # Symlink → ../../shared/skills/jj-guide
+│   ├── skills/                     # Symlinks → ../../shared/skills/*
+│   │   ├── jj-guide
+│   │   ├── jj-commit-push-pr
+│   │   └── jj-workspace
 │   ├── rules/jj-skipper.rules     # execpolicy guard
 │   ├── agents/AGENTS.md
 │   └── install.sh
@@ -113,7 +125,42 @@ jj-skipper/
 └── CHANGELOG.md
 ```
 
-Symlinks keep it DRY — shared content is edited once, used by both adapters. Claude Code follows symlinks during plugin cache copy. Codex `install.sh` falls back to file copy if symlinks aren't supported.
+Symlinks keep it DRY — shared content is edited once, used by both adapters. Claude Code uses real directory copies for plugin cache compatibility. Codex `install.sh` falls back to file copy if symlinks aren't supported.
+
+## Multi-Agent Parallel Workflows
+
+Multiple agents can work on the same repo simultaneously. Each agent gets filesystem isolation via jj workspaces and VCS isolation via bookmarks.
+
+### How it works
+
+```
+Agent A: .worktrees/feature-auth/  → bookmark: feature-auth
+Agent B: .worktrees/feature-ui/    → bookmark: feature-ui
+Agent C: .worktrees/feature-docs/  → bookmark: feature-docs
+```
+
+- **Filesystem isolation**: Each agent works in a separate directory under `.worktrees/`
+- **VCS isolation**: Each agent's bookmark tracks an independent change ID
+- **No file contention**: Different directories = no race conditions on file writes
+- **Independent push**: Each bookmark pushes independently to its own remote branch
+
+### Coordination
+
+Use `agent-status.sh` to see what all agents are working on:
+
+```bash
+bash shared/scripts/agent-status.sh           # list workspaces and bookmarks
+bash shared/scripts/agent-status.sh --check   # also check for potential conflicts
+```
+
+### After a PR merges
+
+All agents should sync:
+```bash
+jj git fetch
+jj bookmark set main -r main@origin
+jj rebase -d main@origin   # rebase agent's local commits onto updated main
+```
 
 ## Design Principles
 
