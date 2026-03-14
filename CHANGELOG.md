@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.3 — 2026-03-14
+
+- **Added**: Multi-agent coordination section in Codex `AGENTS.md` (sync workflow, workspace naming)
+- **Added**: Multi-agent parallel workflows section in README
+- **Fixed**: Test suite — removed stale `file-lock.sh` references (removed in v0.4.1), fixed symlink expectations for `jj-` prefixed skill names, fixed guard tests to work without `.jj/` directory, graceful skip when `jj` is not installed
+- **Fixed**: README repo structure — reflects current state (no `file-lock.sh`, all skills listed, correct naming)
+
 ## 0.4.2 — 2026-03-11
 
 - **Cleanup**: Renamed codex skills with `jj-` prefix for consistency, removed broken `develop` symlink, deleted PLAN.md

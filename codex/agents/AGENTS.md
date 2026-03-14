@@ -40,6 +40,22 @@ jj bookmark set main -r main@origin
 | `git log` | `jj log` |
 | Undo anything | `jj undo` |
 
+## Multi-Agent Coordination
+
+When working in parallel with other agents:
+
+1. **Check what's active**: `jj workspace list && jj bookmark list`
+2. **Before pushing**: verify no file overlap with other bookmarks
+3. **After another PR merges**: sync all agents:
+   ```bash
+   jj git fetch
+   jj bookmark set main -r main@origin
+   jj rebase -d main@origin
+   ```
+4. **Workspace naming**: use descriptive names (e.g., `feature-auth`, `fix-login-bug`) to avoid collisions
+
+Use the jj-status skill for a full multi-agent status check.
+
 ## Troubleshooting
 
 - Undo anything: `jj undo`

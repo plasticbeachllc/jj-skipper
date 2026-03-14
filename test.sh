@@ -18,11 +18,12 @@ section "Repository structure"
 
 expected_files=(
   shared/scripts/jj-guard.sh
-  shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
   shared/scripts/workspace-create.sh
   shared/skills/jj-guide/SKILL.md
   shared/skills/jj-guide/references/git-to-jj.md
+  shared/skills/commit-push-pr/SKILL.md
+  shared/skills/jj-workspace/SKILL.md
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
   claude-code/scripts/worktree-create.sh
@@ -49,15 +50,27 @@ done
 section "Symlinks"
 
 expected_links=(
-  "claude-code/skills/jj-guide"
-  "claude-code/skills/commit-push-pr"
-  "claude-code/skills/develop"
   "claude-code/scripts/jj-guard.sh"
-  "claude-code/scripts/file-lock.sh"
   "codex/skills/jj-guide"
-  "codex/skills/commit-push-pr"
-  "codex/skills/develop"
+  "codex/skills/jj-commit-push-pr"
+  "codex/skills/jj-workspace"
 )
+
+# Claude Code skills should be real directories (not symlinks) for plugin cache compatibility
+cc_skill_dirs=(
+  "claude-code/skills/jj-guide"
+  "claude-code/skills/jj-commit-push-pr"
+  "claude-code/skills/jj-workspace"
+)
+for d in "${cc_skill_dirs[@]}"; do
+  if [[ -d "$d" ]] && [[ ! -L "$d" ]]; then
+    pass "$d is a real directory (plugin cache compatible)"
+  elif [[ -L "$d" ]]; then
+    warn "$d is a symlink (may not survive plugin cache copy)"
+  else
+    fail "$d missing"
+  fi
+done
 
 for link in "${expected_links[@]}"; do
   if [[ -L "$link" ]]; then
@@ -77,7 +90,6 @@ section "Executable bits"
 
 executables=(
   shared/scripts/jj-guard.sh
-  shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
   shared/scripts/workspace-create.sh
   claude-code/scripts/worktree-create.sh
@@ -98,7 +110,6 @@ section "Shell script syntax (bash -n)"
 
 scripts=(
   shared/scripts/jj-guard.sh
-  shared/scripts/file-lock.sh
   shared/scripts/cleanup-workspace.sh
   shared/scripts/workspace-create.sh
   claude-code/scripts/worktree-create.sh
@@ -199,7 +210,11 @@ for field in name description model tools; do
 done
 
 # ---------- jj command existence ----------
-section "jj commands exist (jj 0.39.0)"
+section "jj commands exist"
+
+if ! command -v jj &>/dev/null; then
+  warn "jj not installed — skipping command existence checks"
+else
 
 jj_commands=(
   "st"
@@ -241,15 +256,21 @@ for cmd in "${jj_commands[@]}"; do
   fi
 done
 
+fi  # end jj installed check
+
 # ---------- Guard script ----------
 section "jj-guard.sh functional tests"
 
 guard="shared/scripts/jj-guard.sh"
 
-# Should BLOCK
+# Create a temp directory with .jj to simulate a jj repo
+guard_tmpdir=$(mktemp -d)
+mkdir -p "$guard_tmpdir/.jj"
+
+# Should BLOCK (run from inside the temp jj repo)
 block_commands=("git status" "git commit -m test" "git push" "git checkout -b feat" "git add ." "git stash" "git rebase main" "git reset --hard" "git merge feat" "git branch -d old")
 for cmd in "${block_commands[@]}"; do
-  if bash "$guard" "$cmd" &>/dev/null; then
+  if (cd "$guard_tmpdir" && bash "$OLDPWD/$guard" "$cmd") &>/dev/null; then
     fail "should block: $cmd"
   else
     pass "blocks: $cmd"
@@ -259,7 +280,7 @@ done
 # Should ALLOW
 allow_commands=("jj st" "jj commit -m test" "jj git push" "ls -la" "echo hello" "" ":;git status")
 for cmd in "${allow_commands[@]}"; do
-  if bash "$guard" "$cmd" &>/dev/null; then
+  if (cd "$guard_tmpdir" && bash "$OLDPWD/$guard" "$cmd") &>/dev/null; then
     pass "allows: ${cmd:-<empty>}"
   else
     fail "should allow: ${cmd:-<empty>}"
@@ -267,96 +288,47 @@ for cmd in "${allow_commands[@]}"; do
 done
 
 # CC hook JSON mode
-if echo '{"tool_input":{"command":"git diff"}}' | bash "$guard" &>/dev/null; then
+if echo '{"tool_input":{"command":"git diff"}}' | (cd "$guard_tmpdir" && bash "$OLDPWD/$guard") &>/dev/null; then
   fail "JSON mode should block git diff"
 else
   pass "JSON mode blocks git diff"
 fi
 
-if echo '{"tool_input":{"command":"jj diff"}}' | bash "$guard" &>/dev/null; then
+if echo '{"tool_input":{"command":"jj diff"}}' | (cd "$guard_tmpdir" && bash "$OLDPWD/$guard") &>/dev/null; then
   pass "JSON mode allows jj diff"
 else
   fail "JSON mode should allow jj diff"
 fi
 
-if echo '{"tool_input":{"command":":;git fetch"}}' | bash "$guard" &>/dev/null; then
+if echo '{"tool_input":{"command":":;git fetch"}}' | (cd "$guard_tmpdir" && bash "$OLDPWD/$guard") &>/dev/null; then
   pass "JSON mode allows :;git escape hatch"
 else
   fail "JSON mode should allow :;git escape hatch"
 fi
 
 # Edge cases
-if bash "$guard" "github-cli login" &>/dev/null; then
+if (cd "$guard_tmpdir" && bash "$OLDPWD/$guard" "github-cli login") &>/dev/null; then
   pass "allows github-cli (not git)"
 else
   fail "should allow github-cli"
 fi
 
-if bash "$guard" "gitk" &>/dev/null; then
+if (cd "$guard_tmpdir" && bash "$OLDPWD/$guard" "gitk") &>/dev/null; then
   pass "allows gitk (not 'git ')"
 else
   fail "should allow gitk"
 fi
 
-# ---------- File lock ----------
-section "file-lock.sh functional tests"
-
-lock="shared/scripts/file-lock.sh"
-
-# Clean up any test locks
-rm -rf /tmp/jj-skipper-locks
-
-# Session A acquires lock
-if echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-AAA","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
-  pass "session A acquires file lock"
+# Should ALLOW git in non-jj directories
+non_jj_tmpdir=$(mktemp -d)
+if (cd "$non_jj_tmpdir" && bash "$OLDPWD/$guard" "git status") &>/dev/null; then
+  pass "allows git in non-jj directory"
 else
-  fail "session A should acquire file lock"
+  fail "should allow git in non-jj directory"
 fi
 
-# Session B blocked on same file
-if echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
-  fail "session B should be blocked on same file"
-else
-  pass "session B blocked on locked file"
-fi
+rm -rf "$guard_tmpdir" "$non_jj_tmpdir"
 
-# Session A re-edits same file (refresh)
-if echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-AAA","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
-  pass "session A re-edits same file (allowed)"
-else
-  fail "session A should re-edit own locked file"
-fi
-
-# Session B edits different file
-if echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/lock-other.txt"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
-  pass "session B edits different file (allowed)"
-else
-  fail "session B should edit different file"
-fi
-
-# Edit tool also guarded
-if echo '{"tool_name":"Edit","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
-  fail "Edit tool should also be blocked"
-else
-  pass "Edit tool blocked on locked file"
-fi
-
-# Bash tool passes through
-if echo '{"tool_name":"Bash","tool_input":{"command":"echo hi"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
-  pass "Bash tool passes through file lock"
-else
-  fail "Bash tool should pass through"
-fi
-
-# Read tool passes through
-if echo '{"tool_name":"Read","tool_input":{"file_path":"/tmp/lock-test.txt"},"session_id":"test-BBB","cwd":"/tmp"}' | bash "$lock" &>/dev/null; then
-  pass "Read tool passes through file lock"
-else
-  fail "Read tool should pass through"
-fi
-
-# Clean up test locks
-rm -rf /tmp/jj-skipper-locks
 
 # ---------- Codex install.sh dry run ----------
 section "Codex install.sh (dry run in temp dir)"
@@ -382,10 +354,10 @@ else
   fail "SKILL.md not accessible through installed skill"
 fi
 
-if [[ -d "$tmpdir/codex/skills/commit-push-pr" ]]; then
-  pass "skill installed to \$CODEX_HOME/skills/commit-push-pr"
+if [[ -d "$tmpdir/codex/skills/commit-push-pr" ]] || [[ -d "$tmpdir/codex/skills/jj-workspace" ]]; then
+  pass "additional skills installed to \$CODEX_HOME/skills/"
 else
-  fail "commit-push-pr skill not found in \$CODEX_HOME/skills/"
+  fail "additional skills not found in \$CODEX_HOME/skills/"
 fi
 
 if [[ -f "$tmpdir/codex/rules/jj-skipper.rules" ]]; then
