@@ -98,8 +98,7 @@ jj-skipper/
 │   └── scripts/
 │       ├── jj-guard.sh             # Git command interceptor
 │       ├── workspace-create.sh     # Isolated workspace setup
-│       ├── cleanup-workspace.sh    # Workspace cleanup helper
-│       └── agent-status.sh         # Multi-agent coordination
+│       └── cleanup-workspace.sh    # Workspace cleanup helper
 │
 ├── claude-code/                     # Claude Code adapter
 │   ├── .claude-plugin/plugin.json
@@ -143,15 +142,6 @@ Agent C: .worktrees/feature-docs/  → bookmark: feature-docs
 - **VCS isolation**: Each agent's bookmark tracks an independent change ID
 - **No file contention**: Different directories = no race conditions on file writes
 - **Independent push**: Each bookmark pushes independently to its own remote branch
-
-### Coordination
-
-Use `agent-status.sh` to see what all agents are working on:
-
-```bash
-bash shared/scripts/agent-status.sh           # list workspaces and bookmarks
-bash shared/scripts/agent-status.sh --check   # also check for potential conflicts
-```
 
 ### After a PR merges
 

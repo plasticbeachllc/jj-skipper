@@ -20,12 +20,10 @@ expected_files=(
   shared/scripts/jj-guard.sh
   shared/scripts/cleanup-workspace.sh
   shared/scripts/workspace-create.sh
-  shared/scripts/agent-status.sh
   shared/skills/jj-guide/SKILL.md
   shared/skills/jj-guide/references/git-to-jj.md
   shared/skills/commit-push-pr/SKILL.md
   shared/skills/jj-workspace/SKILL.md
-  shared/skills/jj-status/SKILL.md
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
   claude-code/scripts/worktree-create.sh
@@ -56,7 +54,6 @@ expected_links=(
   "codex/skills/jj-guide"
   "codex/skills/jj-commit-push-pr"
   "codex/skills/jj-workspace"
-  "codex/skills/jj-status"
 )
 
 # Claude Code skills should be real directories (not symlinks) for plugin cache compatibility
@@ -64,7 +61,6 @@ cc_skill_dirs=(
   "claude-code/skills/jj-guide"
   "claude-code/skills/jj-commit-push-pr"
   "claude-code/skills/jj-workspace"
-  "claude-code/skills/jj-status"
 )
 for d in "${cc_skill_dirs[@]}"; do
   if [[ -d "$d" ]] && [[ ! -L "$d" ]]; then
@@ -96,7 +92,6 @@ executables=(
   shared/scripts/jj-guard.sh
   shared/scripts/cleanup-workspace.sh
   shared/scripts/workspace-create.sh
-  shared/scripts/agent-status.sh
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
   codex/install.sh
@@ -117,7 +112,6 @@ scripts=(
   shared/scripts/jj-guard.sh
   shared/scripts/cleanup-workspace.sh
   shared/scripts/workspace-create.sh
-  shared/scripts/agent-status.sh
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
   codex/install.sh

@@ -35,32 +35,18 @@ The bookmark should point at `@-`. If it doesn't:
 jj bookmark set <feature-name> -r @-
 ```
 
-## 4. Pre-push conflict check (multi-agent)
-
-If other bookmarks exist, check for file overlap:
-```bash
-jj bookmark list
-```
-
-For each non-main bookmark that isn't yours, compare changed files:
-```bash
-jj log -r 'main..<other-bookmark>' --no-graph --stat
-```
-
-If overlap with your changes, warn the user before pushing.
-
-## 5. Push
+## 4. Push
 ```bash
 jj git push -b <feature-name>
 ```
 
-## 6. Open PR
+## 5. Open PR
 ```bash
 gh pr create --base main --head <feature-name> --title "<title>" --body "<body>"
 ```
 Use the commit message as the PR title. Ask the user for any additional context for the body.
 
-## 7. Show result
+## 6. Show result
 ```bash
 jj log -r '@ | @-'
 ```

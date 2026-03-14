@@ -1,13 +1,11 @@
 # Changelog
 
-## 0.5.0 — 2026-03-14
+## 0.4.3 — 2026-03-14
 
-- **Added**: `agent-status.sh` script for multi-agent workspace/bookmark discovery and file conflict pre-check
-- **Added**: `jj-status` skill — agents can check what other agents are working on and detect file overlaps before pushing
-- **Added**: Pre-push conflict check step in `commit-push-pr` skill
-- **Added**: Multi-agent coordination section in Codex `AGENTS.md` and `AGENTS.template.md`
+- **Added**: Multi-agent coordination section in Codex `AGENTS.md` (sync workflow, workspace naming)
+- **Added**: Multi-agent parallel workflows section in README
 - **Fixed**: Test suite — removed stale `file-lock.sh` references (removed in v0.4.1), fixed symlink expectations for `jj-` prefixed skill names, fixed guard tests to work without `.jj/` directory, graceful skip when `jj` is not installed
-- **Fixed**: README — updated repo structure to reflect current state (removed `file-lock.sh`, added all skills, correct skill naming)
+- **Fixed**: README repo structure — reflects current state (no `file-lock.sh`, all skills listed, correct naming)
 
 ## 0.4.2 — 2026-03-11
 
