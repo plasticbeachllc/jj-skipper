@@ -28,7 +28,6 @@ expected_files=(
   claude-code/agents/jj-doctor.md
   codex/rules/jj-skipper.rules
   codex/install.sh
-  codex/agents/AGENTS.md
   LICENSE.md
   README.md
   CHANGELOG.md

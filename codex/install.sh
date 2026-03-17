@@ -31,43 +31,15 @@ echo "Installed execpolicy rules → $RULES_DIR/jj-skipper.rules"
 
 # --- Append jj workflow instructions to AGENTS.md (idempotent) ---
 MARKER="<!-- jj-skipper -->"
-JJ_BLOCK="$MARKER
-## jj (Jujutsu) — Version Control
-
-Use jj exclusively. Repos are colocated (.jj/ and .git/ both exist). All VCS writes use jj.
-
-**One bookmark per feature.** Before work:
-\`\`\`bash
-jj new main -m \"feat: description\"
-jj bookmark create <feature-name> -r @
-\`\`\`
-
-After \`jj commit\`, content is at \`@-\`. Bookmark tracks the change ID automatically.
-
-To push: \`jj git push -b <feature-name>\`
-
-To sync after PR merge:
-\`\`\`bash
-jj git fetch
-jj bookmark set main -r main@origin
-\`\`\`
-
-Use the jj-guide skill for full reference. Use the jj-commit-push-pr skill to ship code.
-$MARKER"
+TEMPLATE="$SCRIPT_DIR/../AGENTS.template.md"
+JJ_BLOCK="$(printf '%s\n%s\n%s' "$MARKER" "$(cat "$TEMPLATE")" "$MARKER")"
 
 if [ -f "$AGENTS_MD" ] && grep -q "$MARKER" "$AGENTS_MD"; then
-  # Replace existing block between markers using sed
-  # Write new block to temp file, then splice it in
-  block_file=$(mktemp)
-  echo "$JJ_BLOCK" > "$block_file"
-  # Remove old block (first marker through second marker), then append new block
   sed "/$MARKER/,/$MARKER/d" "$AGENTS_MD" > "$AGENTS_MD.tmp"
-  cat "$block_file" >> "$AGENTS_MD.tmp"
+  echo "$JJ_BLOCK" >> "$AGENTS_MD.tmp"
   mv "$AGENTS_MD.tmp" "$AGENTS_MD"
-  rm -f "$block_file"
   echo "Updated jj-skipper block in $AGENTS_MD"
 else
-  # Append (preserve existing content)
   [ -f "$AGENTS_MD" ] && echo "" >> "$AGENTS_MD"
   echo "$JJ_BLOCK" >> "$AGENTS_MD"
   echo "Appended jj-skipper instructions to $AGENTS_MD"

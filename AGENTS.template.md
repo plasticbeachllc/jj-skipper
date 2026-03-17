@@ -1,49 +1,40 @@
 # Version Control — jj (Jujutsu)
 
-This project uses jj exclusively. The repo is colocated (`.jj/` and `.git/` both exist). All VCS writes use jj. Git reads work naturally.
+When a workspace is tracked by jj (`.jj/` directory present), use jj exclusively for all VCS operations. Never run bare `git` commands in jj-managed workspaces.
 
 ## Rules
 
-- **Never run git commands.** Use jj equivalents. The jj-guide skill has full mappings.
-- **Always use `-m` flags.** Without `-m`, editors open and hang the agent.
-- **Never use `-i` flags.** Interactive TUI will hang.
-- **Use change IDs** (letters like `nmwwolux`) over commit IDs (hex). Change IDs are stable across rewrites.
+- **Always use `-m` flags** — editors hang agents.
+- **Never use `-i` flags** — interactive TUI hangs agents.
+- **Prefer change IDs** (letters like `nmwwolux`) over commit IDs (hex) — they survive rewrites.
 
-## Multi-Agent Model: One Bookmark per Agent/Feature
+## Workflow
 
-Before doing any work, create a bookmark:
 ```bash
 jj new main -m "feat: description"
 jj bookmark create <feature-name> -r @
-```
-
-After committing, the content is at `@-` (parent). `@` is always an empty working copy. The bookmark tracks the change ID, so it stays pointed at the right commit.
-
-To push:
-```bash
+# ... work ...
+jj commit -m "feat: description"
 jj git push -b <feature-name>
 ```
 
-To sync after a PR merges on GitHub:
-```bash
-jj git fetch
-jj bookmark set main -r main@origin
-```
-
-Claude Code handles workspace creation automatically via the WorktreeCreate hook.
-If `gh` CLI doesn't work in a worktree, run `direnv allow` or `source .envrc`.
+After `jj commit`, content is at `@-` (parent). `@` is always an empty working copy.
 
 ## Quick Reference
 
 | Instead of | Use |
 |------------|-----|
 | `git status` | `jj st` |
-| `git add . && git commit -m "msg"` | `jj commit -m "msg"` |
+| `git add && git commit` | `jj commit -m "msg"` |
 | `git push` | `jj git push` |
 | `git pull` | `jj git fetch && jj bookmark set main -r main@origin` |
-| `git pull --rebase` | `jj git fetch && jj rebase -d main@origin` |
 | `git checkout -b feat` | `jj new main -m "feat: desc"` |
 | `git log` | `jj log` |
-| `git stash` | `jj new` |
+| Undo anything | `jj undo` |
 
-Use the jj-guide skill for full reference. Use `/jj-commit-push-pr` to ship code. If VCS state gets tangled, invoke jj-doctor.
+## Skills
+
+- **jj-guide** — full command reference and git-to-jj mappings
+- **jj-workspace** — create isolated workspaces for parallel development
+- **jj-commit-push-pr** — commit, push, and open a PR
+- **jj-doctor** — diagnose and fix tangled VCS state
