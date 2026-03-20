@@ -4,6 +4,7 @@
 
 - **Fixed**: Claude worktree hooks now validate hook payloads before creating or deleting workspace paths, rejecting empty names, path traversal, and non-jj roots
 - **Added**: Regression tests covering invalid `WorktreeCreate` and `WorktreeRemove` payloads
+- **Changed**: `jj-commit-push-pr` now documents a lightweight `.git` write preflight so Codex sessions fail fast when VCS writes are sandboxed
 
 ## 0.4.3 — 2026-03-14
 

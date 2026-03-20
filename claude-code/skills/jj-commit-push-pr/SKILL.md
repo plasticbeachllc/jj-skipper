@@ -12,8 +12,13 @@ Follow these steps exactly:
 ```bash
 jj st
 jj bookmark list
+if [ -d .jj ] && [ -d .git ]; then
+  probe=$(mktemp .git/.jj-skipper-write-test.XXXXXX 2>/dev/null) && rm -f "$probe"
+fi
 ```
 Confirm there are changes to commit and identify the active bookmark.
+
+If the `.git` probe fails in Codex, stop immediately. Do not attempt `jj bookmark create`, `jj commit`, `jj git push`, or a `git` fallback. Tell the user this session can edit files but cannot perform VCS writes, and ask them to ship from a local shell or restart Codex with approvals/network enabled.
 
 If no bookmark exists on `@`, create one:
 ```bash
