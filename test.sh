@@ -320,6 +320,46 @@ fi
 
 rm -rf "$guard_tmpdir" "$non_jj_tmpdir"
 
+# ---------- Worktree hook validation ----------
+section "Worktree hook input validation"
+
+create_hook="claude-code/scripts/worktree-create.sh"
+remove_hook="claude-code/scripts/worktree-remove.sh"
+hook_tmpdir=$(mktemp -d)
+mkdir -p "$hook_tmpdir/.jj" "$hook_tmpdir/.worktrees"
+touch "$hook_tmpdir/.worktrees/keep"
+
+invalid_worktree_payloads=(
+  '{"cwd":"'"$hook_tmpdir"'"}'
+  '{"name":"","cwd":"'"$hook_tmpdir"'"}'
+  '{"name":"../escape","cwd":"'"$hook_tmpdir"'"}'
+  '{"name":"feature/test","cwd":"'"$hook_tmpdir"'"}'
+  '{"name":"safe-name","cwd":"relative/path"}'
+  '{"name":"safe-name","cwd":"'"$hook_tmpdir"'/missing"}'
+)
+
+for payload in "${invalid_worktree_payloads[@]}"; do
+  if echo "$payload" | bash "$create_hook" &>/dev/null; then
+    fail "worktree-create should reject payload: $payload"
+  else
+    pass "worktree-create rejects payload: $payload"
+  fi
+
+  if echo "$payload" | bash "$remove_hook" &>/dev/null; then
+    fail "worktree-remove should reject payload: $payload"
+  else
+    pass "worktree-remove rejects payload: $payload"
+  fi
+done
+
+if [[ -f "$hook_tmpdir/.worktrees/keep" ]]; then
+  pass "worktree-remove leaves .worktrees untouched after invalid payloads"
+else
+  fail "worktree-remove modified .worktrees on invalid payload"
+fi
+
+rm -rf "$hook_tmpdir"
+
 
 # ---------- Codex install.sh dry run ----------
 section "Codex install.sh (dry run in temp dir)"

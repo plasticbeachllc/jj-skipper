@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed**: Claude worktree hooks now validate hook payloads before creating or deleting workspace paths, rejecting empty names, path traversal, and non-jj roots
+- **Added**: Regression tests covering invalid `WorktreeCreate` and `WorktreeRemove` payloads
+
 ## 0.4.3 — 2026-03-14
 
 - **Added**: Multi-agent coordination section in Codex `AGENTS.md` (sync workflow, workspace naming)

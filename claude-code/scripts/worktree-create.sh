@@ -3,20 +3,34 @@
 # Creates an isolated jj workspace with GIT_DIR wiring for gh CLI.
 set -euo pipefail
 
-if ! command -v jq &>/dev/null; then
-  echo "jj-skipper: jq is required for WorktreeCreate hook" >&2
+die() {
+  echo "jj-skipper: $1" >&2
   exit 1
+}
+
+validate_workspace_name() {
+  local name="$1"
+  [[ "$name" =~ ^[A-Za-z0-9._-]+$ ]] || \
+    die "invalid workspace name '$name' (allowed: letters, numbers, dot, underscore, dash)"
+}
+
+if ! command -v jq &>/dev/null; then
+  die "jq is required for WorktreeCreate hook"
 fi
 
 if ! command -v jj &>/dev/null; then
-  echo "jj-skipper: jj is required" >&2
-  exit 1
+  die "jj is required"
 fi
 
 # --- Parse hook payload ---
 INPUT=$(cat)
-NAME=$(echo "$INPUT" | jq -r '.name')
-MAIN_REPO=$(echo "$INPUT" | jq -r '.cwd')
+NAME=$(echo "$INPUT" | jq -er '.name | select(type == "string" and length > 0)') || \
+  die "hook payload must include a non-empty string 'name'"
+MAIN_REPO=$(echo "$INPUT" | jq -er '.cwd | select(type == "string" and length > 0)') || \
+  die "hook payload must include a non-empty string 'cwd'"
+validate_workspace_name "$NAME"
+[[ "$MAIN_REPO" = /* ]] || die "hook payload 'cwd' must be an absolute path"
+[[ -d "$MAIN_REPO/.jj" ]] || die "main repository '$MAIN_REPO' is not a jj workspace root"
 WORKTREE_PATH="$MAIN_REPO/.worktrees/$NAME"
 
 # --- Create jj workspace ---
