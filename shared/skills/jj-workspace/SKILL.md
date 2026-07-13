@@ -14,7 +14,7 @@ Ask the user for a feature name (or derive from their task description).
 MAIN_REPO=$(jj root)
 WORKSPACE_PATH="$MAIN_REPO/.worktrees/<feature-name>"
 mkdir -p "$MAIN_REPO/.worktrees"
-jj workspace add "$WORKSPACE_PATH" --name <feature-name>
+jj -R "$MAIN_REPO" workspace add "$WORKSPACE_PATH" --name <feature-name>
 ```
 
 Wire up `$GIT_DIR` so `gh` CLI and other git-expecting tools work in the workspace:
@@ -45,6 +45,6 @@ Confirm:
 
 Use `/jj-commit-push-pr`, then clean up:
 ```bash
-jj workspace forget <feature-name>
+jj -R "$MAIN_REPO" workspace forget <feature-name>
 rm -rf <workspace-path>
 ```

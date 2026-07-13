@@ -21,13 +21,19 @@ expected_files=(
   shared/skills/jj-guide/references/git-to-jj.md
   shared/skills/jj-commit-push-pr/SKILL.md
   shared/skills/jj-workspace/SKILL.md
+  shared/scripts/jj-guard.sh
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
   claude-code/agents/jj-doctor.md
-  codex/rules/jj-skipper.rules
+  codex/.codex-plugin/plugin.json
+  codex/hooks/hooks.json
+  codex/scripts/jj-guard.sh
+  codex/rules/jj-skipper-strict.rules
   codex/install.sh
+  .agents/plugins/marketplace.json
+  scripts/sync-adapters.sh
   LICENSE.md
   README.md
   CHANGELOG.md
@@ -42,41 +48,24 @@ for f in "${expected_files[@]}"; do
   fi
 done
 
-# ---------- Symlinks ----------
-section "Symlinks"
+# ---------- Self-contained adapter assets ----------
+section "Self-contained adapter assets"
 
-expected_links=(
+adapter_skill_dirs=(
+  "claude-code/skills/jj-guide"
+  "claude-code/skills/jj-commit-push-pr"
+  "claude-code/skills/jj-workspace"
   "codex/skills/jj-guide"
   "codex/skills/jj-commit-push-pr"
   "codex/skills/jj-workspace"
 )
-
-# Claude Code skills should be real directories (not symlinks) for plugin cache compatibility
-cc_skill_dirs=(
-  "claude-code/skills/jj-guide"
-  "claude-code/skills/jj-commit-push-pr"
-  "claude-code/skills/jj-workspace"
-)
-for d in "${cc_skill_dirs[@]}"; do
+for d in "${adapter_skill_dirs[@]}"; do
   if [[ -d "$d" ]] && [[ ! -L "$d" ]]; then
     pass "$d is a real directory (plugin cache compatible)"
   elif [[ -L "$d" ]]; then
-    warn "$d is a symlink (may not survive plugin cache copy)"
+    fail "$d is a symlink (may not survive plugin cache copy)"
   else
     fail "$d missing"
-  fi
-done
-
-for link in "${expected_links[@]}"; do
-  if [[ -L "$link" ]]; then
-    target=$(readlink "$link")
-    if [[ -e "$link" ]]; then
-      pass "$link -> $target (resolves)"
-    else
-      fail "$link -> $target (broken symlink)"
-    fi
-  else
-    fail "$link is not a symlink"
   fi
 done
 
@@ -87,7 +76,10 @@ executables=(
   claude-code/scripts/jj-guard.sh
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
+  shared/scripts/jj-guard.sh
+  codex/scripts/jj-guard.sh
   codex/install.sh
+  scripts/sync-adapters.sh
 )
 
 for f in "${executables[@]}"; do
@@ -105,7 +97,10 @@ scripts=(
   claude-code/scripts/jj-guard.sh
   claude-code/scripts/worktree-create.sh
   claude-code/scripts/worktree-remove.sh
+  shared/scripts/jj-guard.sh
+  codex/scripts/jj-guard.sh
   codex/install.sh
+  scripts/sync-adapters.sh
 )
 
 for s in "${scripts[@]}"; do
@@ -123,6 +118,9 @@ json_files=(
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
   .claude-plugin/marketplace.json
+  codex/.codex-plugin/plugin.json
+  codex/hooks/hooks.json
+  .agents/plugins/marketplace.json
 )
 
 for j in "${json_files[@]}"; do
@@ -132,6 +130,76 @@ for j in "${json_files[@]}"; do
     fail "$j is invalid JSON"
   fi
 done
+
+# ---------- Shared content synchronization ----------
+section "Shared content synchronization"
+
+while IFS= read -r shared_file; do
+  relative_path="${shared_file#shared/skills/}"
+  for adapter in claude-code codex; do
+    adapter_file="$adapter/skills/$relative_path"
+    if cmp -s "$shared_file" "$adapter_file"; then
+      pass "$adapter_file matches canonical source"
+    else
+      fail "$adapter_file differs from $shared_file (run scripts/sync-adapters.sh)"
+    fi
+  done
+done < <(find shared/skills -type f | sort)
+
+for adapter_guard in claude-code/scripts/jj-guard.sh codex/scripts/jj-guard.sh; do
+  if cmp -s shared/scripts/jj-guard.sh "$adapter_guard"; then
+    pass "$adapter_guard matches canonical guard"
+  else
+    fail "$adapter_guard differs from shared/scripts/jj-guard.sh"
+  fi
+done
+
+# ---------- Codex plugin contract ----------
+section "Codex plugin contract"
+
+codex_manifest="codex/.codex-plugin/plugin.json"
+if [[ $(jq -r '.name' "$codex_manifest") == "jj-skipper" ]] &&
+   [[ $(jq -r '.skills' "$codex_manifest") == "./skills/" ]]; then
+  pass "Codex plugin manifest identifies jj-skipper and its skills"
+else
+  fail "Codex plugin manifest has incorrect identity or skills path"
+fi
+
+codex_version=$(jq -r '.version' "$codex_manifest")
+claude_version=$(jq -r '.plugins[] | select(.name == "jj-skipper") | .version' .claude-plugin/marketplace.json)
+if [[ "$codex_version" == "$claude_version" ]]; then
+  pass "Claude Code and Codex adapters publish the same version"
+else
+  fail "adapter versions differ: Claude Code $claude_version, Codex $codex_version"
+fi
+
+if jq -e '.hooks.PreToolUse[] | select(.matcher == "^Bash$")' codex/hooks/hooks.json &>/dev/null; then
+  pass "Codex plugin declares a Bash PreToolUse hook"
+else
+  fail "Codex plugin is missing its Bash PreToolUse hook"
+fi
+
+if jq -e '.plugins[] | select(.name == "jj-skipper" and .source.path == "./codex")' \
+  .agents/plugins/marketplace.json &>/dev/null; then
+  pass "Codex marketplace exposes the native plugin"
+else
+  fail "Codex marketplace is missing the native plugin"
+fi
+
+if command -v codex &>/dev/null; then
+  plugin_home=$(mktemp -d)
+  mkdir -p "$plugin_home/codex"
+  if CODEX_HOME="$plugin_home/codex" codex plugin marketplace add "$PWD" &>/dev/null &&
+     CODEX_HOME="$plugin_home/codex" codex plugin add jj-skipper@jj-skipper &>/dev/null &&
+     CODEX_HOME="$plugin_home/codex" codex plugin list | grep -q 'jj-skipper@jj-skipper.*installed, enabled'; then
+    pass "fresh Codex home discovers and enables the native plugin"
+  else
+    fail "fresh Codex home could not install the native plugin"
+  fi
+  rm -rf "$plugin_home"
+else
+  warn "codex not installed — skipping native plugin discovery smoke test"
+fi
 
 # ---------- Auto-discovery structure ----------
 section "Plugin auto-discovery (default directories)"
@@ -278,23 +346,31 @@ for cmd in "${allow_commands[@]}"; do
   fi
 done
 
-# CC hook JSON mode
-if echo '{"tool_input":{"command":"git diff"}}' | (cd "$guard_tmpdir" && bash "$OLDPWD/$guard") &>/dev/null; then
-  fail "JSON mode should block git diff"
-else
+# Hook JSON mode (shared by Claude Code and Codex)
+guard_output=$(echo '{"tool_input":{"command":"git diff"},"cwd":"'"$guard_tmpdir"'"}' | bash "$guard")
+if jq -e '.hookSpecificOutput.permissionDecision == "deny"' <<< "$guard_output" &>/dev/null; then
   pass "JSON mode blocks git diff"
+else
+  fail "JSON mode should block git diff"
 fi
 
-if echo '{"tool_input":{"command":"jj diff"}}' | (cd "$guard_tmpdir" && bash "$OLDPWD/$guard") &>/dev/null; then
+if echo '{"tool_input":{"command":"jj diff"},"cwd":"'"$guard_tmpdir"'"}' | bash "$guard" &>/dev/null; then
   pass "JSON mode allows jj diff"
 else
   fail "JSON mode should allow jj diff"
 fi
 
-if echo '{"tool_input":{"command":":;git fetch"}}' | (cd "$guard_tmpdir" && bash "$OLDPWD/$guard") &>/dev/null; then
+if echo '{"tool_input":{"command":":;git fetch"},"cwd":"'"$guard_tmpdir"'"}' | bash "$guard" &>/dev/null; then
   pass "JSON mode allows :;git escape hatch"
 else
   fail "JSON mode should allow :;git escape hatch"
+fi
+
+compound_output=$(echo '{"tool_input":{"command":"cd src && git status"},"cwd":"'"$guard_tmpdir"'"}' | bash "$guard")
+if jq -e '.hookSpecificOutput.permissionDecision == "deny"' <<< "$compound_output" &>/dev/null; then
+  pass "JSON mode blocks git in a compound shell command"
+else
+  fail "JSON mode should block git in a compound shell command"
 fi
 
 # Edge cases
@@ -360,6 +436,53 @@ fi
 
 rm -rf "$hook_tmpdir"
 
+# ---------- Real jj workspace lifecycle ----------
+section "Real jj workspace lifecycle"
+
+if command -v jj &>/dev/null; then
+  workspace_repo=$(mktemp -d)
+  jj git init --colocate "$workspace_repo" &>/dev/null
+  workspace_path=$(printf '{"name":"agent-test","cwd":"%s"}\n' "$workspace_repo" | bash "$create_hook")
+
+  if [[ "$workspace_path" == "$workspace_repo/.worktrees/agent-test" ]] &&
+     [[ -d "$workspace_path" ]] && [[ -e "$workspace_path/.jj" ]]; then
+    pass "WorktreeCreate creates a real jj workspace"
+  else
+    fail "WorktreeCreate did not create the expected jj workspace"
+  fi
+
+  if [[ -f "$workspace_path/.envrc" ]] && grep -q 'GIT_DIR=' "$workspace_path/.envrc"; then
+    pass "WorktreeCreate wires Git metadata for compatible tools"
+  else
+    fail "WorktreeCreate did not write Git metadata wiring"
+  fi
+
+  printf '{"name":"agent-test","cwd":"%s"}\n' "$workspace_repo" | bash "$remove_hook"
+  if [[ ! -e "$workspace_path" ]] && ! jj -R "$workspace_repo" workspace list | grep -q 'agent-test'; then
+    pass "WorktreeRemove forgets and removes the jj workspace"
+  else
+    fail "WorktreeRemove left workspace state behind"
+  fi
+  rm -rf "$workspace_repo"
+else
+  warn "jj not installed — skipping real workspace lifecycle"
+fi
+
+# ---------- Codex strict rule evaluation ----------
+section "Codex strict rule evaluation"
+
+if command -v codex &>/dev/null; then
+  strict_decision=$(codex execpolicy check --rules codex/rules/jj-skipper-strict.rules -- git status | jq -r '.decision')
+  jj_decision=$(codex execpolicy check --rules codex/rules/jj-skipper-strict.rules -- jj st | jq -r '.decision')
+  if [[ "$strict_decision" == "forbidden" && "$jj_decision" != "forbidden" ]]; then
+    pass "optional strict rule blocks git without blocking jj"
+  else
+    fail "optional strict rule decisions are incorrect"
+  fi
+else
+  warn "codex not installed — skipping execpolicy evaluation"
+fi
+
 
 # ---------- Codex install.sh dry run ----------
 section "Codex install.sh (dry run in temp dir)"
@@ -367,34 +490,51 @@ section "Codex install.sh (dry run in temp dir)"
 tmpdir=$(mktemp -d)
 trap "rm -rf '$tmpdir'" EXIT
 
-if CODEX_HOME="$tmpdir/codex" bash codex/install.sh &>/dev/null; then
+mkdir -p "$tmpdir/codex"
+printf '%s\n' '{"hooks":{"PostToolUse":[{"matcher":"^Bash$","hooks":[{"type":"command","command":"echo existing"}]}]}}' > "$tmpdir/codex/hooks.json"
+
+if CODEX_HOME="$tmpdir/codex" AGENTS_HOME="$tmpdir/agents" bash codex/install.sh &>/dev/null; then
   pass "install.sh runs without error"
 else
   fail "install.sh failed"
 fi
 
-if [[ -d "$tmpdir/codex/skills/jj-guide" ]]; then
-  pass "skill installed to \$CODEX_HOME/skills/jj-guide"
+if [[ -d "$tmpdir/agents/skills/jj-guide" ]]; then
+  pass "skill installed to \$AGENTS_HOME/skills/jj-guide"
 else
-  fail "skill not found in \$CODEX_HOME/skills/"
+  fail "skill not found in \$AGENTS_HOME/skills/"
 fi
 
-if [[ -f "$tmpdir/codex/skills/jj-guide/SKILL.md" ]]; then
+if [[ -f "$tmpdir/agents/skills/jj-guide/SKILL.md" ]]; then
   pass "SKILL.md accessible through installed skill"
 else
   fail "SKILL.md not accessible through installed skill"
 fi
 
-if [[ -d "$tmpdir/codex/skills/jj-commit-push-pr" ]] || [[ -d "$tmpdir/codex/skills/jj-workspace" ]]; then
-  pass "additional skills installed to \$CODEX_HOME/skills/"
+if [[ -d "$tmpdir/agents/skills/jj-commit-push-pr" ]] || [[ -d "$tmpdir/agents/skills/jj-workspace" ]]; then
+  pass "additional skills installed to \$AGENTS_HOME/skills/"
 else
-  fail "additional skills not found in \$CODEX_HOME/skills/"
+  fail "additional skills not found in \$AGENTS_HOME/skills/"
 fi
 
-if [[ -f "$tmpdir/codex/rules/jj-skipper.rules" ]]; then
-  pass "rules installed to \$CODEX_HOME/rules/jj-skipper.rules"
+if jq -e '.hooks.PreToolUse[] | .hooks[] | select(.command | endswith("/jj-skipper/jj-guard.sh"))' \
+  "$tmpdir/codex/hooks.json" &>/dev/null; then
+  pass "repo-aware guard installed to \$CODEX_HOME/hooks.json"
 else
-  fail "rules not found in \$CODEX_HOME/rules/"
+  fail "repo-aware guard not found in \$CODEX_HOME/hooks.json"
+fi
+
+if jq -e '.hooks.PostToolUse[] | .hooks[] | select(.command == "echo existing")' \
+  "$tmpdir/codex/hooks.json" &>/dev/null; then
+  pass "installer preserves unrelated existing hooks"
+else
+  fail "installer clobbered an unrelated existing hook"
+fi
+
+if [[ ! -e "$tmpdir/codex/rules/jj-skipper.rules" ]]; then
+  pass "unsafe global Git rule is not installed by default"
+else
+  fail "legacy global Git rule should not be installed"
 fi
 
 if [[ -f "$tmpdir/codex/AGENTS.md" ]] && grep -q "jj-skipper" "$tmpdir/codex/AGENTS.md"; then

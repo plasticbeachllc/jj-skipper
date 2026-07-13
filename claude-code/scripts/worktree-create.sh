@@ -35,7 +35,7 @@ WORKTREE_PATH="$MAIN_REPO/.worktrees/$NAME"
 
 # --- Create jj workspace ---
 mkdir -p "$MAIN_REPO/.worktrees"
-jj workspace add "$WORKTREE_PATH" --name "$NAME"
+jj -R "$MAIN_REPO" workspace add "$WORKTREE_PATH" --name "$NAME"
 
 # --- Wire GIT_DIR for gh CLI and other git-expecting tools ---
 if [[ -d "$MAIN_REPO/.git" ]]; then
