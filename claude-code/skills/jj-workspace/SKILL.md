@@ -1,50 +1,28 @@
 ---
 name: jj-workspace
-description: "Create an isolated jj workspace and bookmark for parallel development.
-Activate when starting new work, creating a feature branch, or entering a workspace."
+description: "Create an isolated jj workspace and feature bookmark. Activate only for new parallel work, workspace creation, or feature isolation."
 ---
 
-# Start Work in an Isolated Workspace
+# Create a jj Workspace
 
-## 1. Create workspace
-
-Ask the user for a feature name (or derive from their task description).
+Derive a safe feature name, then run:
 
 ```bash
 MAIN_REPO=$(jj root)
 WORKSPACE_PATH="$MAIN_REPO/.worktrees/<feature-name>"
 mkdir -p "$MAIN_REPO/.worktrees"
 jj -R "$MAIN_REPO" workspace add "$WORKSPACE_PATH" --name <feature-name>
-```
-
-Wire up `$GIT_DIR` so `gh` CLI and other git-expecting tools work in the workspace:
-```bash
-if [[ -d "$MAIN_REPO/.git" ]]; then
-  printf 'export GIT_DIR="%s/.git"\nexport GIT_WORK_TREE="%s"\n' "$MAIN_REPO" "$WORKSPACE_PATH" > "$WORKSPACE_PATH/.envrc"
-  direnv allow "$WORKSPACE_PATH" 2>/dev/null || echo "Run 'source .envrc' in the workspace for gh CLI support."
-fi
-```
-
-## 2. Enter workspace
-```bash
-cd <workspace-path>
-source .envrc    # if direnv is not auto-loading
-```
-
-## 3. Create bookmark
-```bash
+cd "$WORKSPACE_PATH"
 jj new main -m "feat: <description>"
 jj bookmark create <feature-name> -r @
 ```
 
-Confirm:
-> Working on bookmark **<feature-name>** (change **<change-id>**) in workspace **<workspace-path>**.
-> File edits auto-amend into this change. When done, use `/jj-commit-push-pr` to ship.
+For colocated repositories, wire Git-dependent tools:
 
-## 4. When done
-
-Use `/jj-commit-push-pr`, then clean up:
 ```bash
-jj -R "$MAIN_REPO" workspace forget <feature-name>
-rm -rf <workspace-path>
+printf 'export GIT_DIR="%s/.git"\nexport GIT_WORK_TREE="%s"\n' \
+  "$MAIN_REPO" "$WORKSPACE_PATH" > .envrc
+direnv allow 2>/dev/null || echo "Run: source .envrc"
 ```
+
+Report the workspace path, bookmark, and change ID. When finished, use `jj-commit-push-pr`, then clean up with `jj -R "$MAIN_REPO" workspace forget <feature-name>`.

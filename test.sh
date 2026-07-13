@@ -19,6 +19,9 @@ section "Repository structure"
 expected_files=(
   shared/skills/jj-guide/SKILL.md
   shared/skills/jj-guide/references/git-to-jj.md
+  shared/skills/jj-guide/references/workflows.md
+  shared/skills/jj-guide/references/revsets-filesets.md
+  shared/skills/jj-guide/references/recovery.md
   shared/skills/jj-commit-push-pr/SKILL.md
   shared/skills/jj-workspace/SKILL.md
   shared/scripts/jj-guard.sh
@@ -179,6 +182,12 @@ else
   fail "Codex plugin is missing its Bash PreToolUse hook"
 fi
 
+if jq -e '.hooks.SessionStart[] | select(.matcher | contains("startup"))' codex/hooks/hooks.json &>/dev/null; then
+  pass "Codex plugin declares conditional startup context"
+else
+  fail "Codex plugin is missing conditional startup context"
+fi
+
 if jq -e '.plugins[] | select(.name == "jj-skipper" and .source.path == "./codex")' \
   .agents/plugins/marketplace.json &>/dev/null; then
   pass "Codex marketplace exposes the native plugin"
@@ -249,6 +258,26 @@ if sed -n '2,/^---$/p' "$skill_file" | grep -q "^description:"; then
 else
   fail "SKILL.md missing description field"
 fi
+
+# ---------- Context budgets ----------
+section "Context budgets"
+
+assert_word_budget() {
+  local file="$1"
+  local budget="$2"
+  local count
+  count=$(wc -w < "$file" | tr -d ' ')
+  if (( count <= budget )); then
+    pass "$file uses $count/$budget words"
+  else
+    fail "$file uses $count words (budget: $budget)"
+  fi
+}
+
+assert_word_budget AGENTS.template.md 100
+assert_word_budget shared/skills/jj-guide/SKILL.md 350
+assert_word_budget shared/skills/jj-commit-push-pr/SKILL.md 180
+assert_word_budget shared/skills/jj-workspace/SKILL.md 150
 
 # ---------- Agent frontmatter ----------
 section "jj-doctor.md frontmatter"
@@ -373,6 +402,13 @@ else
   fail "JSON mode should block git in a compound shell command"
 fi
 
+session_output=$(echo '{"hook_event_name":"SessionStart","cwd":"'"$guard_tmpdir"'"}' | bash "$guard")
+if jq -e '.hookSpecificOutput.additionalContext | contains("This is a jj repository")' <<< "$session_output" &>/dev/null; then
+  pass "SessionStart adds minimal context in a jj repository"
+else
+  fail "SessionStart should add jj context"
+fi
+
 # Edge cases
 if (cd "$guard_tmpdir" && bash "$OLDPWD/$guard" "github-cli login") &>/dev/null; then
   pass "allows github-cli (not git)"
@@ -392,6 +428,13 @@ if (cd "$non_jj_tmpdir" && bash "$OLDPWD/$guard" "git status") &>/dev/null; then
   pass "allows git in non-jj directory"
 else
   fail "should allow git in non-jj directory"
+fi
+
+non_jj_session=$(echo '{"hook_event_name":"SessionStart","cwd":"'"$non_jj_tmpdir"'"}' | bash "$guard")
+if [[ -z "$non_jj_session" ]]; then
+  pass "SessionStart adds no context outside jj repositories"
+else
+  fail "SessionStart should be silent outside jj repositories"
 fi
 
 rm -rf "$guard_tmpdir" "$non_jj_tmpdir"
@@ -492,6 +535,7 @@ trap "rm -rf '$tmpdir'" EXIT
 
 mkdir -p "$tmpdir/codex"
 printf '%s\n' '{"hooks":{"PostToolUse":[{"matcher":"^Bash$","hooks":[{"type":"command","command":"echo existing"}]}]}}' > "$tmpdir/codex/hooks.json"
+printf '%s\n' 'Keep this user instruction.' '<!-- jj-skipper -->' 'Legacy eager context.' '<!-- jj-skipper -->' > "$tmpdir/codex/AGENTS.md"
 
 if CODEX_HOME="$tmpdir/codex" AGENTS_HOME="$tmpdir/agents" bash codex/install.sh &>/dev/null; then
   pass "install.sh runs without error"
@@ -524,6 +568,13 @@ else
   fail "repo-aware guard not found in \$CODEX_HOME/hooks.json"
 fi
 
+if jq -e '.hooks.SessionStart[] | .hooks[] | select(.command | endswith("/jj-skipper/jj-guard.sh"))' \
+  "$tmpdir/codex/hooks.json" &>/dev/null; then
+  pass "conditional startup context installed to \$CODEX_HOME/hooks.json"
+else
+  fail "conditional startup context not found in \$CODEX_HOME/hooks.json"
+fi
+
 if jq -e '.hooks.PostToolUse[] | .hooks[] | select(.command == "echo existing")' \
   "$tmpdir/codex/hooks.json" &>/dev/null; then
   pass "installer preserves unrelated existing hooks"
@@ -537,10 +588,11 @@ else
   fail "legacy global Git rule should not be installed"
 fi
 
-if [[ -f "$tmpdir/codex/AGENTS.md" ]] && grep -q "jj-skipper" "$tmpdir/codex/AGENTS.md"; then
-  pass "jj-skipper block appended to \$CODEX_HOME/AGENTS.md"
+if grep -q "Keep this user instruction" "$tmpdir/codex/AGENTS.md" &&
+   ! grep -q "jj-skipper" "$tmpdir/codex/AGENTS.md"; then
+  pass "installer removes legacy eager context and preserves user AGENTS.md content"
 else
-  fail "jj-skipper block not found in \$CODEX_HOME/AGENTS.md"
+  fail "installer did not safely remove the legacy jj-skipper AGENTS.md block"
 fi
 
 # ---------- Content checks ----------

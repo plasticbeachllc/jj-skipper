@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.6.0 — 2026-07-13
+
+- **Changed**: Reduced eager jj guidance to a small conditional `SessionStart` payload in jj repositories
+- **Changed**: The standalone Codex installer removes its legacy global `AGENTS.md` block instead of duplicating startup context
+- **Changed**: Converted `jj-guide` into a compact router with detailed workflows, revsets, and recovery loaded on demand
+- **Changed**: Tightened skill trigger boundaries and added context-size regression budgets
+- **Changed**: Reworked user and maintainer documentation for concise installation, usage, architecture, and context guidance
+- **Fixed**: Documented the complete Claude Code marketplace installation flow and current jj bookmark/rebase syntax
+
 ## 0.5.0 — 2026-07-13
 
 - **Added**: Native Codex plugin manifest, marketplace entry, and bundled `PreToolUse` hook
