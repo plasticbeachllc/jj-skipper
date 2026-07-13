@@ -11,15 +11,15 @@ The name "skipper" represents how the agent steers the repo through tumultuous w
 Repos use **colocated mode** (`jj git init --colocate`) so both `.jj/` and `.git/` exist. This preserves compatibility with tools that expect `.git/` (Codex worktrees, VSCode, `gh` CLI). Agents use jj for all writes; git reads work naturally.
 
 ### Guard Layer
-- **Claude Code**: PreToolUse hook intercepts Bash commands and blocks `git` before execution, suggesting the jj equivalent.
-- **Codex**: `execpolicy` rule with `decision = "forbidden"` blocks all `git` commands.
+- **Claude Code and Codex**: PreToolUse hooks intercept Bash commands inside jj repositories and block bare `git` before execution, suggesting the jj equivalent.
 - **Escape hatch**: Prefix with `:;git` for git-only operations (submodule, lfs).
+- **Optional strict mode**: A Codex execpolicy rule is available for machines that use jj exclusively, but it is not installed by default.
 
 ### Knowledge Layer
 - **jj-guide skill**: Loaded automatically for any VCS operation. Covers mental model, workflows, bookmark rules, revsets, filesets, and common pitfalls.
 - **git-to-jj reference**: Complete command mapping from git to jj equivalents.
 
-### Automation Layer (Claude Code)
+### Automation Layer
 - **WorktreeCreate hook**: Bridges `jj workspace add` + `.envrc` for `$GIT_DIR`, so `gh` CLI works in secondary workspaces.
 - **`/jj-workspace`**: Create an isolated workspace and bookmark for parallel agent work.
 - **`/jj-commit-push-pr`**: Commit, push bookmark, and open a PR on GitHub.
@@ -41,14 +41,23 @@ Repos use **colocated mode** (`jj git init --colocate`) so both `.jj/` and `.git
 /plugin install /path/to/jj-skipper/claude-code
 ```
 
-### Codex
+### Codex (native plugin)
 
 ```bash
-git clone https://github.com/plasticbeachllc/jj-skipper.git
-./jj-skipper/codex/install.sh
+codex plugin marketplace add plasticbeachllc/jj-skipper
+codex plugin add jj-skipper@jj-skipper
 ```
 
-> **Warning**: The Codex execpolicy rule blocks `git` commands **globally** across all sessions. For repos still using plain git, remove the rule: `rm ~/.codex/rules/jj-skipper.rules`
+After installation, start a new Codex thread and use `/hooks` to review and trust the bundled guard hook.
+
+For local development, add this checkout as the marketplace source:
+
+```bash
+codex plugin marketplace add /path/to/jj-skipper
+codex plugin add jj-skipper@jj-skipper
+```
+
+The legacy `codex/install.sh` remains available for standalone installation. It installs skills to `~/.agents/skills`, merges a repo-aware guard into `~/.codex/hooks.json`, and does not install a global Git ban.
 
 ### Per-project instructions
 
@@ -95,6 +104,7 @@ jj-skipper/
 │   │   │   └── SKILL.md
 │   │   └── jj-workspace/          # Workspace creation skill
 │   │       └── SKILL.md
+│   └── scripts/jj-guard.sh         # Canonical repo-aware guard
 │
 ├── claude-code/                     # Claude Code adapter
 │   ├── .claude-plugin/plugin.json
@@ -107,20 +117,25 @@ jj-skipper/
 │   └── agents/jj-doctor.md        # VCS debugger sub-agent
 │
 ├── codex/                           # Codex adapter
-│   ├── skills/                     # Symlinks → ../../shared/skills/*
+│   ├── .codex-plugin/plugin.json   # Native Codex plugin manifest
+│   ├── hooks/hooks.json            # Repo-aware PreToolUse hook
+│   ├── scripts/jj-guard.sh         # Generated from shared source
+│   ├── skills/                     # Generated copies of shared skills
 │   │   ├── jj-guide
 │   │   ├── jj-commit-push-pr
 │   │   └── jj-workspace
-│   ├── rules/jj-skipper.rules     # execpolicy guard
-│   ├── agents/AGENTS.md
-│   └── install.sh
+│   ├── rules/jj-skipper-strict.rules # Optional global strict mode
+│   └── install.sh                  # Legacy standalone installer
+│
+├── .agents/plugins/marketplace.json # Native Codex marketplace
+├── scripts/sync-adapters.sh         # Regenerates adapter copies
 │
 ├── LICENSE.md
 ├── README.md
 └── CHANGELOG.md
 ```
 
-Shared skills are the single source of truth. Claude Code uses real copies for plugin cache compatibility. Codex symlinks to shared skills (`install.sh` falls back to copy if needed). Claude Code scripts (guard, worktree hooks) are self-contained — no cross-directory references that break in the plugin cache.
+Shared skills and guard logic are the single source of truth. Platform plugins use generated real copies so their cached packages remain self-contained. Run `scripts/sync-adapters.sh` after changing shared content; the test suite rejects adapter drift.
 
 ## Multi-Agent Parallel Workflows
 
@@ -151,7 +166,7 @@ jj rebase -d main@origin   # rebase agent's local commits onto updated main
 ## Design Principles
 
 1. **Single source of truth.** One repo. Shared skills, scripts, and reference docs. Platform adapters are thin wiring.
-2. **Guard, don't just guide.** Programmatic enforcement (hooks, execpolicy) blocks git before execution.
+2. **Guard, don't just guide.** Repo-aware hooks block bare git before execution without breaking ordinary Git repositories.
 3. **Colocated mode.** Both `.jj/` and `.git/` exist. Agents use jj for writes; git reads work naturally.
 4. **Non-interactive by default.** Every command path works headlessly with `-m`, filesets, and explicit flags.
 

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.5.0 — 2026-07-13
+
+- **Added**: Native Codex plugin manifest, marketplace entry, and bundled `PreToolUse` hook
+- **Changed**: Codex user skills now install to the current `~/.agents/skills` discovery path
+- **Changed**: Bare Git enforcement is repo-aware on both Claude Code and Codex; the global Codex rule is now explicit strict-mode opt-in
+- **Added**: Canonical shared guard logic and `scripts/sync-adapters.sh` to prevent platform-copy drift
+- **Added**: Behavioral tests for compound commands, Codex hook output, real jj workspace lifecycle, plugin contracts, adapter synchronization, and execpolicy decisions
 - **Fixed**: Claude worktree hooks now validate hook payloads before creating or deleting workspace paths, rejecting empty names, path traversal, and non-jj roots
 - **Added**: Regression tests covering invalid `WorktreeCreate` and `WorktreeRemove` payloads
 - **Changed**: `jj-commit-push-pr` now documents a lightweight `.git` write preflight so Codex sessions fail fast when VCS writes are sandboxed

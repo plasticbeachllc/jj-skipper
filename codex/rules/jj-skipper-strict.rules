@@ -1,0 +1,19 @@
+# jj-skipper optional strict mode: block bare git commands globally.
+# This is intentionally not installed by default. Use it only on a machine
+# where every repository is managed with jj.
+
+prefix_rule(
+    pattern = ["git"],
+    decision = "forbidden",
+    justification = "Strict jj-skipper mode blocks bare git globally. Use jj, or disable this optional rule for ordinary Git repositories.",
+    match = [
+        "git status",
+        "git commit -m 'test'",
+        "git push origin main",
+        "git checkout -b feature",
+    ],
+    not_match = [
+        "jj git push",
+        "jj st",
+    ],
+)

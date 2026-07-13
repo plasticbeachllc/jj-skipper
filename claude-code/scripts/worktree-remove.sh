@@ -31,7 +31,7 @@ WORKTREE_PATH="$MAIN_REPO/.worktrees/$NAME"
 
 # --- Forget workspace ---
 if command -v jj &>/dev/null; then
-  jj workspace forget "$NAME" 2>/dev/null || true
+  jj -R "$MAIN_REPO" workspace forget "$NAME" 2>/dev/null || true
 fi
 
 # --- Clean up .envrc ---

@@ -1,0 +1,28 @@
+{
+  "name": "jj-skipper",
+  "version": "0.5.0",
+  "description": "Makes Jujutsu the native VCS for Codex in jj-managed repositories.",
+  "author": {
+    "name": "Plastic Beach LLC",
+    "email": "info@plasticbeach.email",
+    "url": "https://github.com/plasticbeachllc"
+  },
+  "homepage": "https://github.com/plasticbeachllc/jj-skipper",
+  "repository": "https://github.com/plasticbeachllc/jj-skipper",
+  "license": "MIT",
+  "keywords": ["jujutsu", "jj", "version-control", "vcs"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "jj-skipper",
+    "shortDescription": "Native jj workflows for Codex",
+    "longDescription": "Adds jj workflow knowledge and repo-aware protection against accidental bare Git commands in Jujutsu repositories.",
+    "developerName": "Plastic Beach LLC",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/plasticbeachllc/jj-skipper",
+    "defaultPrompt": [
+      "Use jj to inspect and ship my current changes.",
+      "Create an isolated jj workspace for this task."
+    ]
+  }
+}
