@@ -40,15 +40,26 @@ new_hook=$(jq -cn --arg command "$hook_command" '{
     statusMessage: "Checking jj repository policy"
   }]
 }')
+new_session_hook=$(jq -cn --arg command "$hook_command" '{
+  matcher: "startup|resume|clear|compact",
+  hooks: [{
+    type: "command",
+    command: $command,
+    timeout: 10
+  }]
+}')
 
 if [[ -f "$HOOKS_FILE" ]]; then
-  jq --argjson hook "$new_hook" '
+  jq --argjson hook "$new_hook" --argjson session_hook "$new_session_hook" '
     .hooks = (.hooks // {}) |
     .hooks.PreToolUse = ((.hooks.PreToolUse // []) |
-      map(select(any(.hooks[]?; ((.command? // "") | endswith("/jj-skipper/jj-guard.sh"))) | not)) + [$hook])
+      map(select(any(.hooks[]?; ((.command? // "") | endswith("/jj-skipper/jj-guard.sh"))) | not)) + [$hook]) |
+    .hooks.SessionStart = ((.hooks.SessionStart // []) |
+      map(select(any(.hooks[]?; ((.command? // "") | endswith("/jj-skipper/jj-guard.sh"))) | not)) + [$session_hook])
   ' "$HOOKS_FILE" > "$HOOKS_FILE.tmp"
 else
-  jq -n --argjson hook "$new_hook" '{hooks: {PreToolUse: [$hook]}}' > "$HOOKS_FILE.tmp"
+  jq -n --argjson hook "$new_hook" --argjson session_hook "$new_session_hook" \
+    '{hooks: {PreToolUse: [$hook], SessionStart: [$session_hook]}}' > "$HOOKS_FILE.tmp"
 fi
 mv "$HOOKS_FILE.tmp" "$HOOKS_FILE"
 echo "Installed repo-aware hook → $HOOKS_FILE"
@@ -61,25 +72,17 @@ if [[ -f "$legacy_rule" ]] && grep -q "jj-skipper" "$legacy_rule"; then
 fi
 
 MARKER="<!-- jj-skipper -->"
-TEMPLATE="$SCRIPT_DIR/../AGENTS.template.md"
-JJ_BLOCK="$(printf '%s\n%s\n%s' "$MARKER" "$(cat "$TEMPLATE")" "$MARKER")"
-
-mkdir -p "$CODEX_HOME"
+# The repo-aware SessionStart hook replaces the old always-loaded global block.
+# Preserve any user-authored AGENTS.md content while cleaning up prior installs.
 if [[ -f "$AGENTS_MD" ]] && grep -q "$MARKER" "$AGENTS_MD"; then
   sed "/$MARKER/,/$MARKER/d" "$AGENTS_MD" > "$AGENTS_MD.tmp"
-  printf '%s\n' "$JJ_BLOCK" >> "$AGENTS_MD.tmp"
   mv "$AGENTS_MD.tmp" "$AGENTS_MD"
-  echo "Updated jj-skipper block in $AGENTS_MD"
-else
-  [[ -f "$AGENTS_MD" ]] && printf '\n' >> "$AGENTS_MD"
-  printf '%s\n' "$JJ_BLOCK" >> "$AGENTS_MD"
-  echo "Appended jj-skipper instructions to $AGENTS_MD"
+  echo "Removed legacy global jj-skipper block → $AGENTS_MD"
 fi
 
 echo ""
 echo "jj-skipper installed for Codex."
 echo "  Skills: $SKILLS_DIR/{jj-guide,jj-commit-push-pr,jj-workspace}"
-echo "  Hook:   $HOOKS_FILE (blocks bare git only inside jj repositories)"
-echo "  Agent:  $AGENTS_MD"
+echo "  Hooks:  $HOOKS_FILE (minimal jj context plus repo-aware Git guard)"
 echo ""
 echo "Restart Codex, then review and trust the hook with /hooks."

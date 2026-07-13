@@ -1,194 +1,133 @@
 # jj-skipper
 
-**Makes [jj (Jujutsu)](https://martinvonz.github.io/jj/) the native VCS for AI coding agents.**
+Native [Jujutsu (`jj`)](https://docs.jj-vcs.dev/) workflows for AI coding agents.
 
-jj-skipper provides a single source of truth for jj knowledge, guard logic, and workflow automation that works with both Claude Code and OpenAI Codex — without duplicating content or maintaining parallel configurations.
+jj-skipper helps Claude Code and OpenAI Codex operate safely in jj repositories. It blocks accidental bare Git commands, supplies concise jj guidance only when relevant, and provides focused workflows for parallel work and delivery.
 
-The name "skipper" represents how the agent steers the repo through tumultuous waters using jj. It also harkens to jj's ability to "skip" unbookmarked changes in the git commit history.
+## Capabilities
 
-## How It Works
+| Capability | Claude Code | Codex |
+|---|:---:|:---:|
+| Block bare `git` inside jj repositories | ✓ | ✓ |
+| Inject minimal jj context at session start | ✓ | ✓ |
+| On-demand jj guidance | ✓ | ✓ |
+| Workspace and pull-request workflows | ✓ | ✓ |
+| Automatic worktree-to-workspace bridge | ✓ | — |
+| `jj-doctor` diagnostic agent | ✓ | — |
 
-Repos use **colocated mode** (`jj git init --colocate`) so both `.jj/` and `.git/` exist. This preserves compatibility with tools that expect `.git/` (Codex worktrees, VSCode, `gh` CLI). Agents use jj for all writes; git reads work naturally.
+The guard is repository-aware: it activates only when `.jj/` is present and leaves ordinary Git repositories unchanged. For a Git-only operation, use the explicit `:;git` escape hatch.
 
-### Guard Layer
-- **Claude Code and Codex**: PreToolUse hooks intercept Bash commands inside jj repositories and block bare `git` before execution, suggesting the jj equivalent.
-- **Escape hatch**: Prefix with `:;git` for git-only operations (submodule, lfs).
-- **Optional strict mode**: A Codex execpolicy rule is available for machines that use jj exclusively, but it is not installed by default.
+Codex also includes an optional machine-wide [strict rule](codex/rules/jj-skipper-strict.rules). It is not installed by default.
 
-### Knowledge Layer
-- **jj-guide skill**: Loaded automatically for any VCS operation. Covers mental model, workflows, bookmark rules, revsets, filesets, and common pitfalls.
-- **git-to-jj reference**: Complete command mapping from git to jj equivalents.
+## Requirements
 
-### Automation Layer
-- **WorktreeCreate hook**: Bridges `jj workspace add` + `.envrc` for `$GIT_DIR`, so `gh` CLI works in secondary workspaces.
-- **`/jj-workspace`**: Create an isolated workspace and bookmark for parallel agent work.
-- **`/jj-commit-push-pr`**: Commit, push bookmark, and open a PR on GitHub.
-- **jj-doctor**: Sub-agent for debugging lost commits, stale bookmarks, conflicts, and other VCS tangles.
+- [`jj`](https://docs.jj-vcs.dev/latest/install-and-setup/)
+- [`jq`](https://jqlang.github.io/jq/download/)
+- [`direnv`](https://direnv.net/) for automatic Git environment setup in secondary workspaces (recommended)
 
-### Prerequisites
-- `jj`, `jq` (required)
-- `direnv` (recommended — enables automatic `$GIT_DIR` in worktrees; fallback: `source .envrc`)
+Colocated repositories are recommended. They retain `.git/` compatibility for tools such as GitHub CLI and editors while jj remains the VCS interface for agents.
+
+```bash
+jj git init --colocate
+```
 
 ## Installation
 
-### Claude Code (plugin)
+### Claude Code
 
-```bash
-# From marketplace (when published):
+Run inside Claude Code:
+
+```text
 /plugin marketplace add plasticbeachllc/jj-skipper
-
-# Or local install for development:
-/plugin install /path/to/jj-skipper/claude-code
+/plugin install jj-skipper@jj-skipper
+/reload-plugins
 ```
 
-### Codex (native plugin)
+For local development, replace the GitHub repository with this checkout:
+
+```text
+/plugin marketplace add /path/to/jj-skipper
+/plugin install jj-skipper@jj-skipper
+/reload-plugins
+```
+
+### Codex
 
 ```bash
 codex plugin marketplace add plasticbeachllc/jj-skipper
 codex plugin add jj-skipper@jj-skipper
 ```
 
-After installation, start a new Codex thread and use `/hooks` to review and trust the bundled guard hook.
+Start a new Codex session, then review and trust the bundled hook when prompted. For local development, pass the checkout path to `codex plugin marketplace add` instead.
 
-For local development, add this checkout as the marketplace source:
+The legacy [standalone installer](codex/install.sh) remains available for environments without native plugin support:
 
 ```bash
-codex plugin marketplace add /path/to/jj-skipper
-codex plugin add jj-skipper@jj-skipper
+bash codex/install.sh
 ```
 
-The legacy `codex/install.sh` remains available for standalone installation. It installs skills to `~/.agents/skills`, merges a repo-aware guard into `~/.codex/hooks.json`, and does not install a global Git ban.
+## Usage
 
-### Per-project instructions
+The guard and startup context work automatically. Skills activate only for matching tasks:
 
-Add to your project's `CLAUDE.md` or `AGENTS.md`:
+| Skill | Purpose |
+|---|---|
+| `jj-guide` | Complex commands, rewriting, revsets, or recovery |
+| `jj-workspace` | Isolated workspaces and bookmarks for parallel work |
+| `jj-commit-push-pr` | Commit, push, and open a GitHub pull request |
 
-```markdown
-## Version Control
+Claude Code also provides `jj-doctor` for diagnosing lost work, bookmark problems, conflicts, and stale state.
 
-This project uses jj (Jujutsu) exclusively. The repo is colocated (.jj/ and .git/ both
-exist). All VCS writes use jj. Git reads work naturally.
+For environments without plugin support, copy [AGENTS.template.md](AGENTS.template.md) into the appropriate project instructions file.
 
-**Multi-agent model: one bookmark per agent/feature.**
+## Context model
 
-Before doing any work, create a bookmark:
-  jj new main -m "feat: description"
-  jj bookmark create <feature-name> -r @
+jj-skipper keeps its default context footprint deliberately small:
 
-After committing, the content is at @- (parent). @ is always an empty working copy.
+- Non-jj repositories receive no startup guidance.
+- jj repositories receive only a short set of core invariants.
+- Routine commands do not load the general guide.
+- Detailed workflows, revsets, translations, and recovery material load on demand.
+- Tests enforce word budgets for every eagerly discoverable instruction.
 
-To push:
-  jj git push -b <feature-name>
+## Architecture
 
-To sync after a PR merges on GitHub:
-  jj git fetch
-  jj bookmark set main -r main@origin
+`shared/` is the source of truth. The Claude Code and Codex plugin directories contain generated copies so each installed package is self-contained.
 
-Claude Code handles workspace creation automatically via the WorktreeCreate hook.
-If gh CLI doesn't work in a worktree, run `direnv allow` or `source .envrc`.
-
-Use the jj-guide skill for full reference. Use /jj-commit-push-pr to ship code.
-If VCS state gets tangled, invoke jj-doctor.
+```text
+shared/          canonical skills and guard
+claude-code/     Claude Code plugin, hooks, and diagnostic agent
+codex/           Codex plugin, hooks, and legacy installer
+scripts/         adapter synchronization
+test.sh          structural and behavioral test suite
 ```
 
-## Repository Structure
+After editing shared content, regenerate the adapters and run the test suite:
 
-```
-jj-skipper/
-├── shared/                          # Platform-agnostic content
-│   ├── skills/
-│   │   ├── jj-guide/              # Core jj knowledge (both platforms)
-│   │   │   ├── SKILL.md
-│   │   │   └── references/git-to-jj.md
-│   │   ├── jj-commit-push-pr/     # Ship code skill
-│   │   │   └── SKILL.md
-│   │   └── jj-workspace/          # Workspace creation skill
-│   │       └── SKILL.md
-│   └── scripts/jj-guard.sh         # Canonical repo-aware guard
-│
-├── claude-code/                     # Claude Code adapter
-│   ├── .claude-plugin/plugin.json
-│   ├── hooks/hooks.json            # PreToolUse + Worktree hooks
-│   ├── scripts/                    # Worktree bridge scripts
-│   ├── skills/                     # Real directories (plugin cache compatible)
-│   │   ├── jj-guide/
-│   │   ├── jj-commit-push-pr/
-│   │   └── jj-workspace/
-│   └── agents/jj-doctor.md        # VCS debugger sub-agent
-│
-├── codex/                           # Codex adapter
-│   ├── .codex-plugin/plugin.json   # Native Codex plugin manifest
-│   ├── hooks/hooks.json            # Repo-aware PreToolUse hook
-│   ├── scripts/jj-guard.sh         # Generated from shared source
-│   ├── skills/                     # Generated copies of shared skills
-│   │   ├── jj-guide
-│   │   ├── jj-commit-push-pr
-│   │   └── jj-workspace
-│   ├── rules/jj-skipper-strict.rules # Optional global strict mode
-│   └── install.sh                  # Legacy standalone installer
-│
-├── .agents/plugins/marketplace.json # Native Codex marketplace
-├── scripts/sync-adapters.sh         # Regenerates adapter copies
-│
-├── LICENSE.md
-├── README.md
-└── CHANGELOG.md
-```
-
-Shared skills and guard logic are the single source of truth. Platform plugins use generated real copies so their cached packages remain self-contained. Run `scripts/sync-adapters.sh` after changing shared content; the test suite rejects adapter drift.
-
-## Multi-Agent Parallel Workflows
-
-Multiple agents can work on the same repo simultaneously. Each agent gets filesystem isolation via jj workspaces and VCS isolation via bookmarks.
-
-### How it works
-
-```
-Agent A: .worktrees/feature-auth/  → bookmark: feature-auth
-Agent B: .worktrees/feature-ui/    → bookmark: feature-ui
-Agent C: .worktrees/feature-docs/  → bookmark: feature-docs
-```
-
-- **Filesystem isolation**: Each agent works in a separate directory under `.worktrees/`
-- **VCS isolation**: Each agent's bookmark tracks an independent change ID
-- **No file contention**: Different directories = no race conditions on file writes
-- **Independent push**: Each bookmark pushes independently to its own remote branch
-
-### After a PR merges
-
-All agents should sync:
 ```bash
-jj git fetch
-jj bookmark set main -r main@origin
-jj rebase -d main@origin   # rebase agent's local commits onto updated main
+bash scripts/sync-adapters.sh
+bash test.sh
 ```
 
-## Design Principles
+The suite checks plugin contracts, hook behavior, workspace lifecycle, adapter synchronization, shell syntax, and context budgets.
 
-1. **Single source of truth.** One repo. Shared skills, scripts, and reference docs. Platform adapters are thin wiring.
-2. **Guard, don't just guide.** Repo-aware hooks block bare git before execution without breaking ordinary Git repositories.
-3. **Colocated mode.** Both `.jj/` and `.git/` exist. Agents use jj for writes; git reads work naturally.
-4. **Non-interactive by default.** Every command path works headlessly with `-m`, filesets, and explicit flags.
+## Quick reference
 
-## Quick jj Reference
-
-| Instead of | Use |
-|------------|-----|
+| Git habit | jj equivalent |
+|---|---|
 | `git status` | `jj st` |
-| `git add . && git commit -m "msg"` | `jj commit -m "msg"` |
+| `git add -A && git commit -m "msg"` | `jj commit -m "msg"` |
+| `git checkout -b feature` | `jj new main -m "description"`, then create a bookmark |
+| `git pull --rebase` | `jj git fetch`, then `jj rebase -o main@origin` |
 | `git push` | `jj git push` |
-| `git pull` | `jj git fetch && jj bookmark set main -r main@origin` |
-| `git pull --rebase` | `jj git fetch && jj rebase -d main@origin` |
-| `git checkout -b feat` | `jj new main -m "feat: desc"` |
 | `git stash` | `jj new` |
-| `git log` | `jj log` |
-| Undo anything | `jj undo` |
+| `git reflog` | `jj op log` |
 
-See [`shared/skills/jj-guide/SKILL.md`](shared/skills/jj-guide/SKILL.md) for the full reference.
+See the [Git-to-jj reference](shared/skills/jj-guide/references/git-to-jj.md) for a broader mapping.
 
 ## Acknowledgments
 
-Inspired by [kawaz/claude-plugin-jj](https://github.com/kawaz/claude-plugin-jj), [kalupa/jj-workflow](https://github.com/kalupa/jj-workflow), [danverbraganza/jujutsu-skill](https://github.com/danverbraganza/jujutsu-skill), and [alexlwn123/jj-claude-code-plugin](https://github.com/alexlwn123/jj-claude-code-plugin). See [LICENSE.md](LICENSE.md) for details.
+Inspired by [kawaz/claude-plugin-jj](https://github.com/kawaz/claude-plugin-jj), [kalupa/jj-workflow](https://github.com/kalupa/jj-workflow), [danverbraganza/jujutsu-skill](https://github.com/danverbraganza/jujutsu-skill), and [alexlwn123/jj-claude-code-plugin](https://github.com/alexlwn123/jj-claude-code-plugin). See [LICENSE.md](LICENSE.md) for attribution details.
 
 ## License
 

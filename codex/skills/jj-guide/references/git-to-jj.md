@@ -1,4 +1,4 @@
-# Git → jj Complete Command Reference
+# Git to jj Command Reference
 
 ## Daily Operations
 
@@ -33,7 +33,7 @@
 | Create + switch | `git checkout -b <name>` | `jj new main -m "desc"` then bookmark | Two-step in jj |
 | Switch branch | `git checkout <branch>` | `jj new <branch>` or `jj edit <branch>` | `new` creates child; `edit` edits in place |
 | Delete branch | `git branch -d <name>` | `jj bookmark delete <name>` | |
-| Rename branch | `git branch -m old new` | `jj bookmark delete old && jj bookmark create new -r <rev>` | No rename command |
+| Rename branch | `git branch -m old new` | `jj bookmark rename old new` | |
 | Track remote | `git branch -u origin/main` | `jj bookmark track main@origin` | |
 
 ## Remote Operations
@@ -45,7 +45,7 @@
 | Push new branch | `git push -u origin <branch>` | `jj git push -c <rev>` | Auto-creates bookmark from change description |
 | Fetch | `git fetch` | `jj git fetch` | |
 | Pull (fast-forward) | `git pull` | `jj git fetch && jj bookmark set main -r main@origin` | Advances local bookmark |
-| Pull (rebase local) | `git pull --rebase` | `jj git fetch && jj rebase -d main@origin` | Rebases your commits; never `-s main` |
+| Pull (rebase local) | `git pull --rebase` | `jj git fetch && jj rebase -o main@origin` | Rebases your commits; never `-s main` |
 | Clone | `git clone <url>` | `jj git clone <url>` | |
 | Add remote | `git remote add <name> <url>` | `jj git remote add <name> <url>` | |
 
@@ -53,8 +53,8 @@
 
 | Task | Git | jj | Notes |
 |------|-----|----|-------|
-| Rebase | `git rebase <base>` | `jj rebase -d <dest>` | |
-| Rebase range | `git rebase --onto <new> <old>` | `jj rebase -s <source> -d <dest>` | |
+| Rebase | `git rebase <base>` | `jj rebase -o <dest>` | |
+| Rebase range | `git rebase --onto <new> <old>` | `jj rebase -s <source> -o <dest>` | |
 | Cherry-pick | `git cherry-pick <ref>` | `jj duplicate <rev>` | Creates independent copy |
 | Revert | `git revert <ref>` | `jj revert -r <rev>` | Creates inverse change |
 | Interactive rebase | `git rebase -i` | `jj rebase` + `jj squash` + `jj edit` | Multiple commands |
@@ -87,7 +87,7 @@
 |------|-----|----|-------|
 | Add worktree | `git worktree add <path>` | `jj workspace add <path>` | Shared commit graph |
 | List worktrees | `git worktree list` | `jj workspace list` | |
-| Remove worktree | `git worktree remove <path>` | `jj workspace forget <name>` | |
+| Remove worktree | `git worktree remove <path>` | `jj workspace forget <name>` | Forgets metadata; remove the directory separately |
 | Update stale | N/A | `jj workspace update-stale` | Re-sync workspace |
 
 ## Fileset Patterns

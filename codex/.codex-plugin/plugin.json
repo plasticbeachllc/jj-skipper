@@ -1,7 +1,7 @@
 {
   "name": "jj-skipper",
-  "version": "0.5.0",
-  "description": "Makes Jujutsu the native VCS for Codex in jj-managed repositories.",
+  "version": "0.6.0",
+  "description": "Adds repo-aware Git guards and focused Jujutsu workflows for Codex.",
   "author": {
     "name": "Plastic Beach LLC",
     "email": "info@plasticbeach.email",
@@ -15,7 +15,7 @@
   "interface": {
     "displayName": "jj-skipper",
     "shortDescription": "Native jj workflows for Codex",
-    "longDescription": "Adds jj workflow knowledge and repo-aware protection against accidental bare Git commands in Jujutsu repositories.",
+    "longDescription": "Keeps Codex on Jujutsu with repo-aware protection against bare Git commands and focused workflows that load only when needed.",
     "developerName": "Plastic Beach LLC",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],

@@ -5,6 +5,18 @@ set -euo pipefail
 
 standalone=false
 
+find_jj_root() {
+  local check_dir="$1"
+  while [[ "$check_dir" != "/" ]]; do
+    if [[ -d "$check_dir/.jj" ]]; then
+      printf '%s\n' "$check_dir"
+      return 0
+    fi
+    check_dir="$(dirname "$check_dir")"
+  done
+  return 1
+}
+
 deny() {
   local reason="$1"
   if [[ "$standalone" == true ]]; then
@@ -30,22 +42,39 @@ if [[ $# -gt 0 ]]; then
   standalone=true
   command_text="$1"
   hook_cwd="$(pwd)"
+  hook_event=""
 elif [[ ! -t 0 ]]; then
   input=$(cat)
   if [[ -n "$input" ]] && command -v jq &>/dev/null; then
     command_text=$(jq -r '.tool_input.command // empty' <<< "$input")
     hook_cwd=$(jq -r '.cwd // empty' <<< "$input")
+    hook_event=$(jq -r '.hook_event_name // empty' <<< "$input")
   else
     command_text=""
     hook_cwd=""
+    hook_event=""
   fi
 else
   command_text=""
   hook_cwd=""
+  hook_event=""
+fi
+
+[[ -d "$hook_cwd" ]] || hook_cwd="$(pwd)"
+
+if [[ "$hook_event" == "SessionStart" ]]; then
+  if find_jj_root "$hook_cwd" &>/dev/null; then
+    jq -cn '{
+      "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": "This is a jj repository. Use jj for VCS operations; keep commands non-interactive with explicit messages and prefer change IDs. The working copy is @; after jj commit, committed content is at @-. Load a jj-skipper skill only for workspace creation, shipping, unfamiliar operations, or recovery."
+      }
+    }'
+  fi
+  exit 0
 fi
 
 [[ -z "$command_text" ]] && exit 0
-[[ -d "$hook_cwd" ]] || hook_cwd="$(pwd)"
 
 # Explicit escape hatch for git-only operations such as LFS and submodules.
 [[ "$command_text" == :\;git\ * ]] && exit 0
@@ -56,16 +85,7 @@ fi
 git_pattern='(^|[;&|][[:space:]]*|\([[:space:]]*)(command[[:space:]]+|env[[:space:]]+|sudo[[:space:]]+)?git([[:space:]]|$)'
 [[ "$command_text" =~ $git_pattern ]] || exit 0
 
-check_dir="$hook_cwd"
-found_jj=false
-while [[ "$check_dir" != "/" ]]; do
-  if [[ -d "$check_dir/.jj" ]]; then
-    found_jj=true
-    break
-  fi
-  check_dir="$(dirname "$check_dir")"
-done
-[[ "$found_jj" == false ]] && exit 0
+find_jj_root "$hook_cwd" &>/dev/null || exit 0
 
 # Extract the first git subcommand for a useful suggestion. Fall back to a
 # generic pointer when the shell expression is too complex to classify.
