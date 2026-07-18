@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.0 — 2026-07-17
+
 - **Fixed**: Claude `WorktreeRemove` now consumes the documented `worktree_path` payload and validates it against the jj workspace registry
 - **Fixed**: Workspace creation no longer overwrites tracked `.envrc` files or exposes the main Git index through an alternate work tree
 - **Changed**: `jj-workspace` and Claude lifecycle hooks now share one deterministic manager with base selection, atomic bookmark creation, rollback, and recovery bookmarks

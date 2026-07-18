@@ -1,6 +1,6 @@
 {
   "name": "jj-skipper",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Adds repo-aware Git guards, focused jj workflows, and worktree-to-workspace bridging for AI coding agents.",
   "author": {
     "name": "Plastic Beach LLC",

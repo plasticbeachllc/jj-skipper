@@ -1,6 +1,6 @@
 {
   "name": "jj-skipper",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Adds repo-aware Git guards and focused Jujutsu workflows for Codex.",
   "author": {
     "name": "Plastic Beach LLC",
