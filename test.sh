@@ -24,14 +24,15 @@ expected_files=(
   shared/skills/jj-guide/references/recovery.md
   shared/skills/jj-commit-push-pr/SKILL.md
   shared/skills/jj-workspace/SKILL.md
+  shared/skills/jj-workspace/scripts/workspace.sh
   shared/scripts/jj-guard.sh
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
-  claude-code/scripts/worktree-create.sh
-  claude-code/scripts/worktree-remove.sh
+  claude-code/skills/jj-workspace/scripts/workspace.sh
   claude-code/agents/jj-doctor.md
   codex/.codex-plugin/plugin.json
   codex/hooks/hooks.json
+  codex/skills/jj-workspace/scripts/workspace.sh
   codex/scripts/jj-guard.sh
   codex/rules/jj-skipper-strict.rules
   codex/install.sh
@@ -77,10 +78,11 @@ section "Executable bits"
 
 executables=(
   claude-code/scripts/jj-guard.sh
-  claude-code/scripts/worktree-create.sh
-  claude-code/scripts/worktree-remove.sh
+  claude-code/skills/jj-workspace/scripts/workspace.sh
   shared/scripts/jj-guard.sh
+  shared/skills/jj-workspace/scripts/workspace.sh
   codex/scripts/jj-guard.sh
+  codex/skills/jj-workspace/scripts/workspace.sh
   codex/install.sh
   scripts/sync-adapters.sh
 )
@@ -98,10 +100,11 @@ section "Shell script syntax (bash -n)"
 
 scripts=(
   claude-code/scripts/jj-guard.sh
-  claude-code/scripts/worktree-create.sh
-  claude-code/scripts/worktree-remove.sh
+  claude-code/skills/jj-workspace/scripts/workspace.sh
   shared/scripts/jj-guard.sh
+  shared/skills/jj-workspace/scripts/workspace.sh
   codex/scripts/jj-guard.sh
+  codex/skills/jj-workspace/scripts/workspace.sh
   codex/install.sh
   scripts/sync-adapters.sh
 )
@@ -230,6 +233,7 @@ hook_scripts=$(jq -r '.. | .command? // empty' "$plugin_root/hooks/hooks.json" |
 while IFS= read -r cmd; do
   # Extract the script path (after "bash ")
   script_path="${cmd#bash }"
+  script_path="${script_path%% *}"
   if [[ -e "$script_path" ]]; then
     pass "hook -> $script_path exists"
   else
@@ -442,42 +446,53 @@ rm -rf "$guard_tmpdir" "$non_jj_tmpdir"
 # ---------- Worktree hook validation ----------
 section "Worktree hook input validation"
 
-create_hook="claude-code/scripts/worktree-create.sh"
-remove_hook="claude-code/scripts/worktree-remove.sh"
+workspace_manager="claude-code/skills/jj-workspace/scripts/workspace.sh"
 hook_tmpdir=$(mktemp -d)
-mkdir -p "$hook_tmpdir/.jj" "$hook_tmpdir/.worktrees"
-touch "$hook_tmpdir/.worktrees/keep"
+jj git init --colocate "$hook_tmpdir" &>/dev/null
 
-invalid_worktree_payloads=(
+invalid_create_payloads=(
   '{"cwd":"'"$hook_tmpdir"'"}'
   '{"name":"","cwd":"'"$hook_tmpdir"'"}'
+  '{"name":".","cwd":"'"$hook_tmpdir"'"}'
+  '{"name":"..","cwd":"'"$hook_tmpdir"'"}'
+  '{"name":"-option","cwd":"'"$hook_tmpdir"'"}'
   '{"name":"../escape","cwd":"'"$hook_tmpdir"'"}'
   '{"name":"feature/test","cwd":"'"$hook_tmpdir"'"}'
   '{"name":"safe-name","cwd":"relative/path"}'
   '{"name":"safe-name","cwd":"'"$hook_tmpdir"'/missing"}'
 )
 
-for payload in "${invalid_worktree_payloads[@]}"; do
-  if echo "$payload" | bash "$create_hook" &>/dev/null; then
-    fail "worktree-create should reject payload: $payload"
+for payload in "${invalid_create_payloads[@]}"; do
+  if echo "$payload" | bash "$workspace_manager" hook-create &>/dev/null; then
+    fail "workspace manager should reject create payload: $payload"
   else
-    pass "worktree-create rejects payload: $payload"
-  fi
-
-  if echo "$payload" | bash "$remove_hook" &>/dev/null; then
-    fail "worktree-remove should reject payload: $payload"
-  else
-    pass "worktree-remove rejects payload: $payload"
+    pass "workspace manager rejects create payload: $payload"
   fi
 done
 
-if [[ -f "$hook_tmpdir/.worktrees/keep" ]]; then
-  pass "worktree-remove leaves .worktrees untouched after invalid payloads"
+outside_path=$(mktemp -d)
+invalid_remove_payloads=(
+  '{"cwd":"'"$hook_tmpdir"'"}'
+  '{"worktree_path":"","cwd":"'"$hook_tmpdir"'"}'
+  '{"worktree_path":"relative/path","cwd":"'"$hook_tmpdir"'"}'
+  '{"worktree_path":"'"$outside_path"'","cwd":"'"$hook_tmpdir"'"}'
+)
+
+for payload in "${invalid_remove_payloads[@]}"; do
+  if echo "$payload" | bash "$workspace_manager" hook-remove &>/dev/null; then
+    fail "workspace manager should reject remove payload: $payload"
+  else
+    pass "workspace manager rejects remove payload: $payload"
+  fi
+done
+
+if [[ -d "$outside_path" ]]; then
+  pass "workspace manager leaves paths outside .worktrees untouched"
 else
-  fail "worktree-remove modified .worktrees on invalid payload"
+  fail "workspace manager removed a path outside .worktrees"
 fi
 
-rm -rf "$hook_tmpdir"
+rm -rf "$hook_tmpdir" "$outside_path"
 
 # ---------- Real jj workspace lifecycle ----------
 section "Real jj workspace lifecycle"
@@ -485,7 +500,24 @@ section "Real jj workspace lifecycle"
 if command -v jj &>/dev/null; then
   workspace_repo=$(mktemp -d)
   jj git init --colocate "$workspace_repo" &>/dev/null
-  workspace_path=$(printf '{"name":"agent-test","cwd":"%s"}\n' "$workspace_repo" | bash "$create_hook")
+  workspace_repo=$(cd "$workspace_repo" && pwd -P)
+  printf '%s\n' 'export PROJECT_SETTING=keep-me' > "$workspace_repo/.envrc"
+  jj -R "$workspace_repo" commit -m baseline &>/dev/null
+  main_change=$(jj -R "$workspace_repo" log -r @ --no-graph -T 'change_id')
+  main_parent=$(jj -R "$workspace_repo" log -r @- --no-graph -T 'change_id')
+
+  fresh_path=$(bash "$workspace_manager" create --repo "$workspace_repo" --name fresh-local \
+    --base fresh --description 'test: local fresh base')
+  fresh_parent=$(jj -R "$fresh_path" log -r @- --no-graph -T 'change_id')
+  if [[ "$fresh_parent" == "$main_parent" ]]; then
+    pass "fresh base falls back to the local parent when trunk resolves only to root"
+  else
+    fail "fresh base unexpectedly selected the root revision"
+  fi
+  bash "$workspace_manager" remove --repo "$workspace_repo" --path "$fresh_path"
+
+  workspace_path=$(printf '{"name":"agent-test","cwd":"%s"}\n' "$workspace_repo" |
+    JJ_SKIPPER_WORKSPACE_BASE=head bash "$workspace_manager" hook-create)
 
   if [[ "$workspace_path" == "$workspace_repo/.worktrees/agent-test" ]] &&
      [[ -d "$workspace_path" ]] && [[ -e "$workspace_path/.jj" ]]; then
@@ -494,18 +526,62 @@ if command -v jj &>/dev/null; then
     fail "WorktreeCreate did not create the expected jj workspace"
   fi
 
-  if [[ -f "$workspace_path/.envrc" ]] && grep -q 'GIT_DIR=' "$workspace_path/.envrc"; then
-    pass "WorktreeCreate wires Git metadata for compatible tools"
+  workspace_parent=$(jj -R "$workspace_path" log -r @- --no-graph -T 'change_id')
+  if [[ "$workspace_parent" == "$main_change" ]] &&
+     jj -R "$workspace_path" bookmark list agent-test -T 'name' | grep -qx 'agent-test' &&
+     [[ $(jj -R "$workspace_path" log -r @ --no-graph -T 'description.first_line()') == "worktree: agent-test" ]]; then
+    pass "WorktreeCreate honors head base and creates a described bookmark"
   else
-    fail "WorktreeCreate did not write Git metadata wiring"
+    fail "WorktreeCreate did not create the expected base, description, and bookmark"
   fi
 
-  printf '{"name":"agent-test","cwd":"%s"}\n' "$workspace_repo" | bash "$remove_hook"
+  if [[ $(<"$workspace_path/.envrc") == 'export PROJECT_SETTING=keep-me' ]] &&
+     ! grep -q 'GIT_DIR' "$workspace_path/.envrc"; then
+    pass "WorktreeCreate preserves a tracked .envrc"
+  else
+    fail "WorktreeCreate overwrote the tracked .envrc"
+  fi
+
+  if printf '{"name":"agent-test","cwd":"%s"}\n' "$workspace_repo" |
+     bash "$workspace_manager" hook-create &>/dev/null; then
+    fail "WorktreeCreate should reject duplicate workspace names"
+  else
+    pass "WorktreeCreate rejects duplicate workspace names"
+  fi
+
+  jj -R "$workspace_path" bookmark delete agent-test &>/dev/null
+  printf '%s\n' 'preserve me' > "$workspace_path/recovery.txt"
+  printf '{"worktree_path":"%s","cwd":"%s"}\n' "$workspace_path" "$workspace_repo" |
+    bash "$workspace_manager" hook-remove
   if [[ ! -e "$workspace_path" ]] && ! jj -R "$workspace_repo" workspace list | grep -q 'agent-test'; then
     pass "WorktreeRemove forgets and removes the jj workspace"
   else
     fail "WorktreeRemove left workspace state behind"
   fi
+
+  if jj -R "$workspace_repo" bookmark list 'jj-skipper-recovery-agent-test-*' -T 'name' 2>/dev/null |
+     grep -q '^jj-skipper-recovery-agent-test-'; then
+    pass "WorktreeRemove preserves unbookmarked changes with a recovery bookmark"
+  else
+    fail "WorktreeRemove did not preserve unbookmarked changes"
+  fi
+
+  secondary_path="$workspace_repo/secondary"
+  jj -R "$workspace_repo" workspace add "$secondary_path" --name secondary -r @ -m secondary &>/dev/null
+  printf '%s\n' 'secondary state' > "$secondary_path/secondary.txt"
+  secondary_change=$(jj -R "$secondary_path" log -r @ --no-graph -T 'change_id')
+  nested_path=$(bash "$workspace_manager" create --repo "$secondary_path" --name from-secondary \
+    --base head --description 'test: secondary base')
+  nested_parent=$(jj -R "$nested_path" log -r @- --no-graph -T 'change_id')
+  if [[ "$nested_path" == "$workspace_repo/.worktrees/from-secondary" ]] &&
+     [[ "$nested_parent" == "$secondary_change" ]]; then
+    pass "workspace manager resolves the primary root while preserving a secondary head base"
+  else
+    fail "workspace manager mishandled creation from a secondary workspace"
+  fi
+  bash "$workspace_manager" remove --repo "$secondary_path" --path "$nested_path"
+  jj -R "$workspace_repo" workspace forget secondary &>/dev/null
+  rm -rf "$secondary_path"
   rm -rf "$workspace_repo"
 else
   warn "jj not installed — skipping real workspace lifecycle"

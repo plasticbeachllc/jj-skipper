@@ -27,7 +27,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-create.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/skills/jj-workspace/scripts/workspace.sh hook-create",
+            "timeout": 30
           }
         ]
       }
@@ -37,7 +38,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-remove.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/skills/jj-workspace/scripts/workspace.sh hook-remove",
+            "timeout": 30
           }
         ]
       }

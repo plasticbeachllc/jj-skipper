@@ -5,24 +5,16 @@ description: "Create an isolated jj workspace and feature bookmark. Activate onl
 
 # Create a jj Workspace
 
-Derive a safe feature name, then run:
+Derive a safe feature name and run the bundled manager from this skill directory:
 
 ```bash
-MAIN_REPO=$(jj root)
-WORKSPACE_PATH="$MAIN_REPO/.worktrees/<feature-name>"
-mkdir -p "$MAIN_REPO/.worktrees"
-jj -R "$MAIN_REPO" workspace add "$WORKSPACE_PATH" --name <feature-name>
-cd "$WORKSPACE_PATH"
-jj new main -m "feat: <description>"
-jj bookmark create <feature-name> -r @
+bash scripts/workspace.sh create \
+  --repo "$(jj root)" \
+  --name <feature-name> \
+  --base fresh \
+  --description "feat: <description>"
 ```
 
-For colocated repositories, wire Git-dependent tools:
+Use `--base head` only when the new workspace must include the current local change; otherwise keep the clean `fresh` base. The manager creates the workspace and bookmark atomically and prints its path.
 
-```bash
-printf 'export GIT_DIR="%s/.git"\nexport GIT_WORK_TREE="%s"\n' \
-  "$MAIN_REPO" "$WORKSPACE_PATH" > .envrc
-direnv allow 2>/dev/null || echo "Run: source .envrc"
-```
-
-Report the workspace path, bookmark, and change ID. When finished, use `jj-commit-push-pr`, then clean up with `jj -R "$MAIN_REPO" workspace forget <feature-name>`.
+Report the path, bookmark, base, and change ID. When finished, use `jj-commit-push-pr`, then run `bash scripts/workspace.sh remove --repo <repo> --path <workspace-path>`.
