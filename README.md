@@ -23,7 +23,6 @@ Codex also includes an optional machine-wide [strict rule](codex/rules/jj-skippe
 
 - [`jj`](https://docs.jj-vcs.dev/latest/install-and-setup/)
 - [`jq`](https://jqlang.github.io/jq/download/)
-- [`direnv`](https://direnv.net/) for automatic Git environment setup in secondary workspaces (recommended)
 
 Colocated repositories are recommended. They retain `.git/` compatibility for tools such as GitHub CLI and editors while jj remains the VCS interface for agents.
 
@@ -77,6 +76,8 @@ The guard and startup context work automatically. Skills activate only for match
 | `jj-commit-push-pr` | Commit, push, and open a GitHub pull request |
 
 Claude Code also provides `jj-doctor` for diagnosing lost work, bookmark problems, conflicts, and stale state.
+
+Automated Claude worktrees start from the locally known non-root `trunk()` revision, falling back to `@-` in a local repository without one. Set `JJ_SKIPPER_WORKSPACE_BASE=head` to base them on the current local change. The custom hook does not alter `.envrc`; use explicit repository selectors such as `gh pr create --repo owner/repository` for Git-dependent tools.
 
 For environments without plugin support, copy [AGENTS.template.md](AGENTS.template.md) into the appropriate project instructions file.
 

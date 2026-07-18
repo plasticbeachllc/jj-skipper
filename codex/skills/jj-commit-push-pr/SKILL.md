@@ -12,8 +12,6 @@ jj st
 jj bookmark list
 ```
 
-In a colocated Codex session, verify `.git` is writable before any VCS mutation. If it is not, stop; do not fall back to Git.
-
 2. If `@` has no bookmark, create one:
 
 ```bash
@@ -32,7 +30,8 @@ jj bookmark set <feature-name> -r @-   # only if mispointed
 
 ```bash
 jj git push -b <feature-name>
-gh pr create --base main --head <feature-name> --title "<title>" --body "<body>"
+gh pr create --repo <owner/repository> --base main --head <feature-name> \
+  --title "<title>" --body "<body>"
 ```
 
-Return the PR URL and `jj log -r '@ | @-'` summary.
+Derive `<owner/repository>` from the `origin` URL shown by `jj git remote list`; do not add Git work-tree metadata to a jj workspace. Return the PR URL and `jj log -r '@ | @-'` summary.
