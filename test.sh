@@ -29,7 +29,6 @@ expected_files=(
   claude-code/.claude-plugin/plugin.json
   claude-code/hooks/hooks.json
   claude-code/skills/jj-workspace/scripts/workspace.sh
-  claude-code/agents/jj-doctor.md
   codex/.codex-plugin/plugin.json
   codex/hooks/hooks.json
   codex/skills/jj-workspace/scripts/workspace.sh
@@ -217,7 +216,7 @@ fi
 section "Plugin auto-discovery (default directories)"
 
 plugin_root="claude-code"
-for dir in hooks agents skills; do
+for dir in hooks skills; do
   if [[ -d "$plugin_root/$dir" ]]; then
     pass "plugin has $dir/ directory"
   else
@@ -282,24 +281,6 @@ assert_word_budget AGENTS.template.md 100
 assert_word_budget shared/skills/jj-guide/SKILL.md 350
 assert_word_budget shared/skills/jj-commit-push-pr/SKILL.md 180
 assert_word_budget shared/skills/jj-workspace/SKILL.md 150
-
-# ---------- Agent frontmatter ----------
-section "jj-doctor.md frontmatter"
-
-agent_file="claude-code/agents/jj-doctor.md"
-if head -1 "$agent_file" | grep -q "^---"; then
-  pass "jj-doctor.md has frontmatter delimiter"
-else
-  fail "jj-doctor.md missing frontmatter"
-fi
-
-for field in name description model tools; do
-  if sed -n '2,/^---$/p' "$agent_file" | grep -q "^${field}:"; then
-    pass "jj-doctor.md has $field field"
-  else
-    fail "jj-doctor.md missing $field field"
-  fi
-done
 
 # ---------- jj command existence ----------
 section "jj commands exist"

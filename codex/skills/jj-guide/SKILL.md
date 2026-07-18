@@ -1,6 +1,6 @@
 ---
 name: jj-guide
-description: "Reference for unfamiliar or complex jj operations, command translation, revsets, rewriting, or recovery. Do not activate for routine status, diff, log, workspace creation, or shipping tasks covered by dedicated skills."
+description: "Reference for unfamiliar or complex jj operations, command translation, revsets, rewriting, repository diagnosis, or recovery. Use for lost work, bookmark errors, conflicts, divergence, stale workspaces, or operation-log forensics. Do not activate for routine status, diff, log, workspace creation, or shipping tasks covered by dedicated skills."
 ---
 
 # jj Guide
@@ -21,7 +21,7 @@ Use this skill only when the task needs more than routine `jj st`, `jj diff`, or
 - Git command translation: [references/git-to-jj.md](references/git-to-jj.md)
 - Bookmarks, syncing, rewriting, review, and selective changes: [references/workflows.md](references/workflows.md)
 - Revsets and filesets: [references/revsets-filesets.md](references/revsets-filesets.md)
-- Lost work, divergence, conflicts, or stale state: [references/recovery.md](references/recovery.md)
+- Repository diagnosis, lost work, divergence, conflicts, or stale state: [references/recovery.md](references/recovery.md)
 
 Do not read every reference. Select the narrowest relevant one.
 

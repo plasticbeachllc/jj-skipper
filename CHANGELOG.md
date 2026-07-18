@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.1 — 2026-07-17
+
+- **Changed**: Folded the Claude-only `jj-doctor` agent into `jj-guide` as a shared, evidence-first diagnosis and recovery workflow
+
 ## 0.7.0 — 2026-07-17
 
 - **Fixed**: Claude `WorktreeRemove` now consumes the documented `worktree_path` payload and validates it against the jj workspace registry

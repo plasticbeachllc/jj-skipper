@@ -11,9 +11,9 @@ jj-skipper helps Claude Code and OpenAI Codex operate safely in jj repositories.
 | Block bare `git` inside jj repositories | ✓ | ✓ |
 | Inject minimal jj context at session start | ✓ | ✓ |
 | On-demand jj guidance | ✓ | ✓ |
+| Repository diagnosis and recovery | ✓ | ✓ |
 | Workspace and pull-request workflows | ✓ | ✓ |
 | Automatic worktree-to-workspace bridge | ✓ | — |
-| `jj-doctor` diagnostic agent | ✓ | — |
 
 The guard is repository-aware: it activates only when `.jj/` is present and leaves ordinary Git repositories unchanged. For a Git-only operation, use the explicit `:;git` escape hatch.
 
@@ -71,11 +71,9 @@ The guard and startup context work automatically. Skills activate only for match
 
 | Skill | Purpose |
 |---|---|
-| `jj-guide` | Complex commands, rewriting, revsets, or recovery |
+| `jj-guide` | Complex commands, diagnosis, rewriting, revsets, or recovery |
 | `jj-workspace` | Isolated workspaces and bookmarks for parallel work |
 | `jj-commit-push-pr` | Commit, push, and open a GitHub pull request |
-
-Claude Code also provides `jj-doctor` for diagnosing lost work, bookmark problems, conflicts, and stale state.
 
 Automated Claude worktrees start from the locally known non-root `trunk()` revision, falling back to `@-` in a local repository without one. Set `JJ_SKIPPER_WORKSPACE_BASE=head` to base them on the current local change. The custom hook does not alter `.envrc`; use explicit repository selectors such as `gh pr create --repo owner/repository` for Git-dependent tools.
 
@@ -97,7 +95,7 @@ jj-skipper keeps its default context footprint deliberately small:
 
 ```text
 shared/          canonical skills and guard
-claude-code/     Claude Code plugin, hooks, and diagnostic agent
+claude-code/     Claude Code plugin and hooks
 codex/           Codex plugin, hooks, and legacy installer
 scripts/         adapter synchronization
 test.sh          structural and behavioral test suite
